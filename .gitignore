@@ -33,5 +33,14 @@ supabase/.branches/
 # Temporary / raw design dumps & OCR data
 pdf/
 *.traineddata
-
 design/
+
+# Image assets and drawable-nodpi
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.bmp
+*.ico
+**/drawable-nodpi/
