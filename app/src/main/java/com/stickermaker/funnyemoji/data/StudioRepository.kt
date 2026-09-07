@@ -74,7 +74,7 @@ object StudioRepository {
         return client.from("user_settings").select { filter { eq("user_id", owner) } }.decodeList<UserSettings>().firstOrNull()
     }
     suspend fun language(code: String) {
-        require(code in listOf("en", "vi"))
+        require(code in listOf("fr", "en", "vi", "hi", "es", "zh", "pt", "ru"))
         client.from("user_settings").upsert(UserSettings(DemoSession.userId(), code))
     }
     suspend fun feedback(id: String, message: String) {

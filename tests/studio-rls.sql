@@ -5,8 +5,18 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001
 insert into public.sticker_collections(id,name) values ('10000000-0000-0000-0000-000000000001','Owner one');
 insert into public.stickers(id,name,image_path) values ('20000000-0000-0000-0000-000000000001','One','00000000-0000-0000-0000-000000000001/one.png');
 insert into public.collection_stickers(collection_id,sticker_id) values ('10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001');
+insert into public.user_settings(language) values ('vi');
+insert into public.app_feedback(id,message) values ('30000000-0000-0000-0000-000000000001','Private test message');
+insert into storage.objects(bucket_id,name) values ('sticker-images','00000000-0000-0000-0000-000000000001/private.png');
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
 do $$ begin
+ if (select count(*) from public.user_settings) != 0 then raise exception 'Settings leaked'; end if;
+ if (select count(*) from public.app_feedback) != 0 then raise exception 'Feedback leaked'; end if;
+ if (select count(*) from storage.objects) != 0 then raise exception 'Storage leaked'; end if;
+ begin
+  insert into storage.objects(bucket_id,name) values ('sticker-images','00000000-0000-0000-0000-000000000001/wrong.png');
+  raise exception 'Foreign upload allowed';
+ exception when insufficient_privilege then null; end;
  if (select count(*) from public.stickers) != 0 then raise exception 'Other user can read stickers'; end if;
  if (select count(*) from public.sticker_collections) != 0 then raise exception 'Other user can read collections'; end if;
  if (select count(*) from public.collection_stickers) != 0 then raise exception 'Other user can read links'; end if;

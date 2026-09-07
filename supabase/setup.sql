@@ -63,7 +63,7 @@ create table public.collection_stickers (
 );
 create table public.user_settings (
  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
- language text not null default 'en' check (language in ('en','vi'))
+ language text not null default 'en' check (language in ('fr','en','vi','hi','es','zh','pt','ru'))
 );
 create table public.app_feedback (
  id uuid primary key,

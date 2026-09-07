@@ -12,8 +12,12 @@ import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class StickerRenderingTest {
-    // Test package storage: never overwrite a user's draft/imports.
-    private val context get() = InstrumentationRegistry.getInstrumentation().context
+    // Isolated directory within the instrumentation process UID; never use the real draft.
+    private val context get() = object : android.content.ContextWrapper(
+        InstrumentationRegistry.getInstrumentation().targetContext
+    ) {
+        override fun getFilesDir(): File = File(baseContext.cacheDir, "render-tests").apply { mkdirs() }
+    }
 
     @Test fun transparentExportHasNoCheckerboard() {
         val image = renderSticker(context, StickerDocument())
@@ -59,7 +63,7 @@ class StickerRenderingTest {
         } finally { image.recycle() }
     }
 
-    @Test fun lastLayerRendersInFrontAndMovesToExpectedPosition() {
+    @Test fun brushRendersAboveBackground() {
         val red = InkStroke(listOf(InkPoint(.5f, .5f)), 0xFFFF0000, 20f)
         val image = renderSticker(context, StickerDocument(background = 0xFF00B686, strokes = listOf(red)))
         try {

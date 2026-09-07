@@ -32,3 +32,15 @@ Hoặc build từ terminal:
 ```
 
 APK debug nằm tại `app/build/outputs/apk/debug/app-debug.apk`.
+
+## Giao diện và chức năng mới
+
+Đã bổ sung Create (ảnh, chữ, emoji, brush, outline, layers, undo/redo và bản nháp),
+My Studio, chi tiết collection, preview/chia sẻ PNG và Settings theo các frame Figma đã đọc.
+Chi tiết phạm vi và bằng chứng kiểm thử: [verification/README.md](verification/README.md).
+
+Để bật lưu cloud trên server hiện tại, chạy [supabase/setup.sql](supabase/setup.sql)
+**một lần trên project chưa có schema**, rồi bật **Anonymous Sign-Ins** trong Supabase Auth.
+Nếu đã chạy migration trước đó, chỉ chạy các file còn thiếu trong `supabase/migrations/`.
+App dùng phiên khách và RLS; mỗi người dùng chỉ đọc/ghi dữ liệu của mình.
+Chưa chạy migration thì các thao tác cloud sẽ báo lỗi; bản nháp editor vẫn được giữ trên máy.

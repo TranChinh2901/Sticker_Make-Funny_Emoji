@@ -24,6 +24,8 @@ import java.util.UUID
 
 @Composable
 internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
+    val languages = mapOf("fr" to "Français", "en" to "English", "vi" to "Tiếng Việt", "hi" to "Hindi",
+        "es" to "Español", "zh" to "Chinese", "pt" to "Português", "ru" to "Русский")
     val context = LocalContext.current
     val preferences = remember { context.getSharedPreferences("startup", 0) }
     val scope = rememberCoroutineScope()
@@ -53,16 +55,16 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(48.dp).background(Color(0xFF34D399), CircleShape), contentAlignment = Alignment.Center) { Asset(R.drawable.settings_container, 18.754.dp, 19.883.dp) }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Go Premium", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
-                        Text("Unlock premium templates, remove ads, and get more sticker slots", color = Color(0xFFECFDF5), fontSize = 12.sp, lineHeight = 16.5.sp)
+                        Text("Go Premium", fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
+                        Text("Unlock premium templates, remove ads, and get more sticker slots", fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, color = Color(0xFFECFDF5), fontSize = 12.sp, lineHeight = 16.5.sp)
                     }
-                    Button(onClick = onPremium, colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF059669)), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) { Text("Get Premium", fontSize = 12.sp) }
+                    Button(onClick = onPremium, colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF059669)), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)) { Text("Get Premium", fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontSize = 12.sp) }
                 }
             }
-            Text("General", Modifier.padding(horizontal = 8.dp), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text("General", Modifier.padding(horizontal = 8.dp), fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Surface(shape = RoundedCornerShape(24.dp), shadowElevation = 2.dp) {
                 Column(Modifier.padding(horizontal = 12.dp)) {
-                    SettingsRow("Language Setting", R.drawable.settings_group2, 17.917f, 17.917f, if (language == "vi") "Tiếng Việt" else "English") { draftLanguage = language; error = null; dialog = "Language Setting" }
+                    SettingsRow("Language Setting", R.drawable.settings_group2, 17.917f, 17.917f, languages[language] ?: "English") { draftLanguage = language; error = null; dialog = "Language Setting" }
                     SettingsRow("Feedback", R.drawable.settings_group3, 18.333f, 16.25f) { error = null; dialog = "Feedback" }
                     SettingsRow("Rating", R.drawable.settings_icon_park_outline_star, 20f, 20f) { error = null; dialog = "Rating" }
                     SettingsRow("Share App", R.drawable.settings_group4, 15f, 16.667f) {
@@ -86,7 +88,7 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
                 when (title) {
                     "Language Setting" -> {
                         Text("Choose the language for the welcome screens. The editor currently uses English.")
-                        listOf("en" to "English", "vi" to "Tiếng Việt").forEach { (code, label) ->
+                        languages.forEach { (code, label) ->
                             Row(Modifier.fillMaxWidth().clickable(enabled = !busy) { draftLanguage = code }, verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(draftLanguage == code, { draftLanguage = code }, enabled = !busy); Text(label)
                             }
@@ -143,8 +145,8 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
 private fun SettingsRow(label: String, icon: Int, leafWidth: Float, leafHeight: Float, value: String? = null, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) { Asset(icon, leafWidth.dp, leafHeight.dp) }
-        Text(label, Modifier.weight(1f).padding(start = 12.dp), fontSize = 16.sp)
-        if (value != null) Text(value, fontSize = 14.sp, color = Color(0xFF969696)) else Asset(R.drawable.settings_arrows_chevron_chevron_right, 16.dp)
+        Text(label, Modifier.weight(1f).padding(start = 12.dp), fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontSize = 16.sp)
+        if (value != null) Text(value, fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontSize = 14.sp, color = Color(0xFF969696)) else Asset(R.drawable.settings_arrows_chevron_chevron_right, 16.dp)
     }
     HorizontalDivider(color = Color(0xFFEEEEEE))
 }
