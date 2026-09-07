@@ -33,3 +33,5 @@ supabase/.branches/
 # Temporary / raw design dumps & OCR data
 pdf/
 *.traineddata
+
+design/
