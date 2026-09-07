@@ -21,11 +21,18 @@ val StickerInk = Color(0xFF1F2937)
 @OptIn(ExperimentalTextApi::class)
 val Baloo = FontFamily(
     Font(R.font.baloo2, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.baloo2, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
     Font(R.font.baloo2, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
     Font(R.font.baloo2, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
 )
 val Poppins = FontFamily(Font(R.font.poppins_regular))
-val Inter = FontFamily(Font(R.font.inter))
+@OptIn(ExperimentalTextApi::class)
+val Inter = FontFamily(
+    Font(R.font.inter, variationSettings = FontVariation.Settings(FontVariation.weight(400))),
+    Font(R.font.inter, FontWeight.Medium, variationSettings = FontVariation.Settings(FontVariation.weight(500))),
+    Font(R.font.inter, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
+    Font(R.font.inter, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
+)
 
 private val AppColors = lightColorScheme(
     primary = StickerGreen,

@@ -3,9 +3,12 @@
 .idea/
 .kotlin/
 .codex/
+.pi/
 local.properties
+keystore.properties
+secrets.properties
 build/
-app/build/
+**/build/
 captures/
 .externalNativeBuild/
 .cxx/
@@ -13,7 +16,9 @@ captures/
 *.aab
 *.ap_
 *.dex
+*.hprof
 .DS_Store
+Thumbs.db
 *.jks
 *.keystore
 google-services.json
@@ -24,3 +29,7 @@ supabase/.branches/
 .env
 .env.*
 !.env.example
+
+# Temporary / raw design dumps & OCR data
+pdf/
+*.traineddata

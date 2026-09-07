@@ -14,6 +14,11 @@ three-column sticker cards, favorite toggles, and the Home navigation state.
 - Sticker viewport: 70 × 70 dp; image leaf 56.021 × 70 dp.
 - Navigation: 24 dp outer boxes; folder leaf 21.5 dp; settings leaf 21 dp.
 - Android draws its own status/navigation bars rather than using the iOS mock status bar.
+- Phone layouts scale the 390-unit artboard uniformly with available width (0.8–1.3×),
+  preserving the user's font scale. Android's bottom system inset sits outside the
+  artboard; the app tab bar retains its designed 84.2-unit height.
+- Header: logo at y=52, search at y=100, banner at y=168. Banner heading uses
+  a white text stroke; Baloo 2 weight axes are explicitly set to 400/500/600/700.
 
 Scope: local sample data matching the repeated NickNam sticker in the design.
 Search filters category/name; favorites survive activity recreation but are not stored

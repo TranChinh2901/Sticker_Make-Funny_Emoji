@@ -48,12 +48,16 @@ internal fun AssetButton(@DrawableRes id: Int, label: String, onClick: () -> Uni
 
 @Composable
 internal fun BrandHeader(title: String? = null, onPremium: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 20.dp),
+    Row(Modifier.fillMaxWidth().height(100.dp).padding(start = 20.dp, end = 20.dp, top = 52.dp, bottom = 20.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
         if (title == null) CroppedAsset(R.drawable.home_chat_gpt_image18484423_thg720261_photoroom1,
             172.242.dp, 28.dp, 1.197f, 3.1323f, -.1133f, -1.0056f, "Sticker Maker")
         else Text(title, fontFamily = Baloo, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = StickerGreen)
-        AssetButton(R.drawable.home_material_symbols_crown_rounded, "Get Premium", onPremium, 28.dp)
+        Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+            IconButton(onClick = onPremium, modifier = Modifier.requiredSize(48.dp)) {
+                Asset(R.drawable.home_material_symbols_crown_rounded, 28.dp, description = "Get Premium")
+            }
+        }
     }
 }
 
@@ -63,7 +67,7 @@ internal fun MainNavigation(selected: Int, onSelect: (Int) -> Unit) {
     val icons = listOf(R.drawable.home_solar_home_angle_bold,
         R.drawable.home_si_ai_edit_alt2_line, R.drawable.home_group, R.drawable.home_group1)
     Surface(shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp), shadowElevation = 10.dp) {
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().height(76.dp).padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(84.2.dp).padding(start = 20.dp, end = 20.dp, top = 21.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             names.forEachIndexed { index, name ->
                 Column(Modifier.weight(1f).fillMaxHeight().clickable(role = Role.Tab) { onSelect(index) },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
