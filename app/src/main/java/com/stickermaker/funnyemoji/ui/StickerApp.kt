@@ -13,6 +13,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,31 +37,67 @@ import kotlinx.coroutines.launch
 /** Home: Mixed Mode.svg; Search: Home.svg. Supabase integration is a separate step. */
 @Composable
 fun StickerApp() {
+    var startupComplete by rememberSaveable { mutableStateOf(false) }
+    if (!startupComplete) {
+        StartupScreen(onReady = { startupComplete = true })
+        return
+    }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var collectionRefresh by rememberSaveable { mutableIntStateOf(0) }
     var collectionOpen by rememberSaveable { mutableStateOf(false) }
     var premiumOpen by rememberSaveable { mutableStateOf(false) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var unlockOpen by rememberSaveable { mutableStateOf(false) }
     var category by rememberSaveable { mutableStateOf<String?>(null) }
-    val screenState = androidx.compose.runtime.saveable.rememberSaveableStateHolder()
-    BackHandler(enabled = premiumOpen || searchOpen || category != null) {
-        if (premiumOpen) premiumOpen = false else if (searchOpen) searchOpen = false else category = null
+    var detail by remember { mutableStateOf<com.stickermaker.funnyemoji.data.StickerCollection?>(null) }
+    var preview by remember { mutableStateOf<com.stickermaker.funnyemoji.data.SavedSticker?>(null) }
+    val screenState = rememberSaveableStateHolder()
+    val navigate: (Int) -> Unit = { tab = it; detail = null; preview = null; category = null; searchOpen = false }
+    BackHandler(enabled = premiumOpen || searchOpen || category != null || tab != 0 || detail != null || preview != null) {
+        when {
+            premiumOpen -> premiumOpen = false
+            preview != null -> preview = null
+            searchOpen -> searchOpen = false
+            category != null -> category = null
+            detail != null -> detail = null
+            else -> tab = 0
+        }
     }
     val deviceDensity = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val artboardScale = (maxWidth.value / 390f).coerceIn(0.8f, 1.3f)
         CompositionLocalProvider(LocalDensity provides Density(deviceDensity.density * artboardScale, deviceDensity.fontScale)) {
-            screenState.SaveableStateProvider(if (premiumOpen) "premium" else if (searchOpen) "search" else category?.let { "category-$it" } ?: "home") {
-                if (premiumOpen) PremiumScreen(onClose = { premiumOpen = false })
-                else if (searchOpen) SearchScaffold(onBack = { searchOpen = false }, onUnlock = { unlockOpen = true }, onPremium = { premiumOpen = true })
-                else if (category != null) CategoryScreen(
-                    title = category!!, onBack = { category = null }, onPremium = { premiumOpen = true },
-                    onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true },
-                )
-                else MixedModeHome(onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true },
-                    onViewMore = { category = if (it == "Trendding") "Trending" else it }, onPremium = { premiumOpen = true },
-                    onNewCollection = { collectionOpen = true })
+            val key = when {
+                premiumOpen -> "premium"
+                preview != null -> "preview-${preview!!.id}"
+                tab == 1 -> "editor"
+                detail != null -> "collection-${detail!!.id}"
+                searchOpen -> "search"
+                category != null -> "category-$category"
+                else -> "tab-$tab"
             }
-            if (collectionOpen) NewCollectionSheet(onDismiss = { collectionOpen = false })
+            screenState.SaveableStateProvider(key) {
+                when {
+                    premiumOpen -> PremiumScreen(onClose = { premiumOpen = false })
+                    preview != null -> SavedStickerScreen(preview!!, onBack = { preview = null }, onNewCollection = { collectionOpen = true })
+                    tab == 1 -> EditorScreen(onBack = { tab = if (detail != null) 2 else 0 }, onSaved = {
+                        preview = it; tab = 2; collectionRefresh++
+                    })
+                    detail != null -> CollectionDetailScreen(detail!!, onBack = { detail = null },
+                        onCreate = { tab = 1 }, onChanged = { collectionRefresh++ }, refresh = collectionRefresh,
+                        onPreview = { preview = it })
+                    searchOpen -> SearchScaffold(onBack = { searchOpen = false }, onUnlock = { unlockOpen = true }, onPremium = { premiumOpen = true })
+                    category != null -> CategoryScreen(title = category!!, onBack = { category = null },
+                        onPremium = { premiumOpen = true }, onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true })
+                    tab == 2 -> MyStudioScreen(onCreate = { collectionOpen = true }, refresh = collectionRefresh,
+                        onNavigate = navigate, onPremium = { premiumOpen = true }, onCollection = { detail = it }, onSticker = { preview = it })
+                    tab == 3 -> SettingsScreen(onNavigate = navigate, onPremium = { premiumOpen = true })
+                    else -> MixedModeHome(onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true },
+                        onViewMore = { category = if (it == "Trendding") "Trending" else it },
+                        onPremium = { premiumOpen = true }, onNavigate = navigate)
+                }
+            }
+            if (collectionOpen) NewCollectionSheet(onDismiss = { collectionOpen = false }, onCreated = { collectionRefresh++ })
             if (unlockOpen) UnlockStickerSheet(onDismiss = { unlockOpen = false }, onPremium = { unlockOpen = false; premiumOpen = true })
         }
     }

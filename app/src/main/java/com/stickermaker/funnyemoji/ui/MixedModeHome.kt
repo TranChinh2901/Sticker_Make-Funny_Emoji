@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 
 /** Coordinates follow Mixed Mode.svg's 390-unit artboard. Uses design fixtures, not server records. */
 @Composable
-internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMore: (String) -> Unit, onPremium: () -> Unit, onNewCollection: () -> Unit) {
+internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMore: (String) -> Unit, onPremium: () -> Unit, onNavigate: (Int) -> Unit) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val scroll = rememberLazyListState()
@@ -51,10 +51,7 @@ internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMor
         containerColor = StickerBackground,
         topBar = { BrandHeader(onPremium = onPremium) },
         bottomBar = {
-            MainNavigation(0) { index ->
-                if (index == 2) onNewCollection()
-                else if (index != 0) later(listOf("Home", "Customize", "My Studio", "Settings")[index])
-            }
+            MainNavigation(0, onNavigate)
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->

@@ -73,7 +73,7 @@ internal fun MainNavigation(selected: Int, onSelect: (Int) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
                         val leaf = if (index == 2) 21.5.dp else if (index == 3) 21.dp else 24.dp
-                        Asset(icons[index], leaf)
+                        Asset(icons[index], leaf, tint = if (selected == index) StickerGreen else Color(0xFF878787))
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(name, fontSize = 11.4.sp, fontFamily = Inter, maxLines = 1,
