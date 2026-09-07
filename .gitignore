@@ -1,0 +1,26 @@
+*.iml
+.gradle/
+.idea/
+.kotlin/
+.codex/
+local.properties
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+.DS_Store
+*.jks
+*.keystore
+google-services.json
+
+# Supabase CLI local state and secrets
+supabase/.temp/
+supabase/.branches/
+.env
+.env.*
+!.env.example

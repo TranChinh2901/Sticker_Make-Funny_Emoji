@@ -1,0 +1,4 @@
+# Copy this file to local.properties and use your own values.
+sdk.dir=/absolute/path/to/Android/Sdk
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
