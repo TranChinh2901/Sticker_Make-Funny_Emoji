@@ -45,13 +45,17 @@ internal fun StartupScreen(onReady: () -> Unit) {
     }
     BackHandler(stage in 0..4) { if (stage in 1..3) stage-- }
     if (stage == -1) {
-        Box(Modifier.fillMaxSize()) {
-            // Cover different device aspect ratios without stretching the artwork.
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // Use the same centered Crop transform for artwork and progress. Anchoring
+            // progress to system insets separately can overlap text baked into the art.
+            val scale = maxOf(maxWidth / 390.dp, maxHeight / 844.dp)
+            val artLeft = (maxWidth - 390.dp * scale) / 2
+            val artTop = (maxHeight - 844.dp * scale) / 2
             Image(painterResource(R.drawable.splash_art), null,
                 Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             LinearProgressIndicator(
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 24.dp).fillMaxWidth().height(10.dp),
+                modifier = Modifier.offset(x = artLeft + 20.dp * scale, y = artTop + 787.dp * scale)
+                    .size(width = 350.dp * scale, height = 10.dp * scale),
                 color = StickerGreen,
             )
         }

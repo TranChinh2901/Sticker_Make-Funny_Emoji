@@ -39,7 +39,6 @@ internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMor
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val scroll = rememberLazyListState()
-    var favorites by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     val later: (String) -> Unit = { feature ->
         scope.launch {
             snackbar.currentSnackbarData?.dismiss()
@@ -80,7 +79,7 @@ internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMor
                     Asset(R.drawable.home_frame2087328581, 36.dp, 6.dp)
                 }
             }
-            listOf("Trendding", "Frame", "Animal").forEach { title ->
+            listOf("Trending", "Frame", "Animal").forEach { title ->
                 item(key = title) {
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(Modifier.fillMaxWidth().height(27.257.dp), verticalAlignment = Alignment.CenterVertically,
@@ -97,13 +96,8 @@ internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMor
                             }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            repeat(3) { index ->
-                                val id = "$title-$index"
-                                StickerCard(id, Modifier.weight(1f), id in favorites, { selected ->
-                                    favorites = ArrayList(favorites).apply {
-                                        if (selected) { if (id !in this) add(id) } else remove(id)
-                                    }
-                                }, onUnlock)
+                            com.stickermaker.funnyemoji.data.StickerCatalog.search(title).take(3).forEach { sticker ->
+                                CatalogCard(sticker.id, Modifier.weight(1f), onUnlock)
                             }
                         }
                     }

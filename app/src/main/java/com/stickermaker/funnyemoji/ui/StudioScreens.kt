@@ -208,7 +208,7 @@ private fun StickerPicker(collectionId: String, existing: Set<String>, onDismiss
 }
 
 @Composable
-internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNewCollection: () -> Unit) {
+internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNewCollection: () -> Unit, onDeleted: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var collections by remember { mutableStateOf<List<StickerCollection>>(emptyList()) }
@@ -216,8 +216,12 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
+    var delete by rememberSaveable { mutableStateOf(false) }
+    val export = rememberPngExport()
     Column(Modifier.fillMaxSize().background(StickerBackground).navigationBarsPadding()) {
-        StudioHeader("Preview sticker", onBack)
+        StudioHeader("Preview sticker", onBack) {
+            TextButton(enabled = !busy && !export.busy, onClick = { error = null; delete = true }) { Text("Delete") }
+        }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PrivateImage(sticker.imagePath, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp)).background(androidx.compose.ui.graphics.Color.White), label = sticker.name)
             Text(sticker.name, fontFamily = Baloo, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
@@ -248,11 +252,27 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
                     finally { busy = false }
                 }
             }) { Text("Add to Collection") }
-            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            OutlinedButton(enabled = !busy && !export.busy, modifier = Modifier.fillMaxWidth().height(52.dp), onClick = {
+                export.save(sticker.name) { StudioRepository.image(sticker.imagePath) }
+            }) { Text("Save PNG to device") }
+            if (busy || export.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            export.message?.let { Text(it) }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             message?.let { Text(it, color = StickerGreen) }
         }
     }
+    if (delete) AlertDialog(onDismissRequest = { if (!busy) delete = false }, title = { Text("Delete sticker?") },
+        text = { Column { Text("Remove ${sticker.name} from My Studio and all its collections? Files you exported remain on your device."); error?.let { Text(it, color = MaterialTheme.colorScheme.error) } } },
+        confirmButton = { TextButton(enabled = !busy, onClick = {
+            busy = true; error = null
+            scope.launch {
+                try { StudioRepository.delete(sticker.id); delete = false; onDeleted() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { error = "Could not delete sticker. Please try again." }
+                finally { busy = false }
+            }
+        }) { Text("Delete") } },
+        dismissButton = { TextButton(enabled = !busy, onClick = { delete = false }) { Text("Cancel") } })
     if (chooseCollection) AlertDialog(onDismissRequest = { if (!busy) chooseCollection = false }, title = { Text("Choose collection") }, text = {
         Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
             if (collections.isEmpty()) Text("Create a collection to organize your stickers.")

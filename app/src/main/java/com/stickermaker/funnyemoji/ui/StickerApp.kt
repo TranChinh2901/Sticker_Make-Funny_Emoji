@@ -14,6 +14,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.ui.platform.LocalContext
+import com.stickermaker.funnyemoji.data.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +39,7 @@ import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.launch
 
-/** Home: Mixed Mode.svg; Search: Home.svg. Supabase integration is a separate step. */
+/** Figma navigation with private studio and a shared catalogue favorite state. */
 @Composable
 fun StickerApp() {
     var startupComplete by rememberSaveable { mutableStateOf(false) }
@@ -42,6 +47,9 @@ fun StickerApp() {
         StartupScreen(onReady = { startupComplete = true })
         return
     }
+    val context = LocalContext.current
+    val favorites = remember { FavoritesStore(context) }
+    LaunchedEffect(favorites) { favorites.sync() }
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var collectionRefresh by rememberSaveable { mutableIntStateOf(0) }
     var collectionOpen by rememberSaveable { mutableStateOf(false) }
@@ -49,8 +57,14 @@ fun StickerApp() {
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var unlockOpen by rememberSaveable { mutableStateOf(false) }
     var category by rememberSaveable { mutableStateOf<String?>(null) }
-    var detail by remember { mutableStateOf<com.stickermaker.funnyemoji.data.StickerCollection?>(null) }
-    var preview by remember { mutableStateOf<com.stickermaker.funnyemoji.data.SavedSticker?>(null) }
+    var detail by rememberSaveable(stateSaver = Saver<StickerCollection?, String>(
+        save = { it?.let { value -> Json.encodeToString(value) } ?: "" },
+        restore = { it.takeIf(String::isNotEmpty)?.let { value -> Json.decodeFromString<StickerCollection>(value) } }
+    )) { mutableStateOf(null) }
+    var preview by rememberSaveable(stateSaver = Saver<SavedSticker?, String>(
+        save = { it?.let { value -> Json.encodeToString(value) } ?: "" },
+        restore = { it.takeIf(String::isNotEmpty)?.let { value -> Json.decodeFromString<SavedSticker>(value) } }
+    )) { mutableStateOf(null) }
     val screenState = rememberSaveableStateHolder()
     val navigate: (Int) -> Unit = { tab = it; detail = null; preview = null; category = null; searchOpen = false }
     BackHandler(enabled = premiumOpen || searchOpen || category != null || tab != 0 || detail != null || preview != null) {
@@ -66,7 +80,7 @@ fun StickerApp() {
     val deviceDensity = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val artboardScale = (maxWidth.value / 390f).coerceIn(0.8f, 1.3f)
-        CompositionLocalProvider(LocalDensity provides Density(deviceDensity.density * artboardScale, deviceDensity.fontScale)) {
+        CompositionLocalProvider(LocalFavorites provides favorites, LocalDensity provides Density(deviceDensity.density * artboardScale, deviceDensity.fontScale)) {
             val key = when {
                 premiumOpen -> "premium"
                 preview != null -> "preview-${preview!!.id}"
@@ -79,8 +93,8 @@ fun StickerApp() {
             screenState.SaveableStateProvider(key) {
                 when {
                     premiumOpen -> PremiumScreen(onClose = { premiumOpen = false })
-                    preview != null -> SavedStickerScreen(preview!!, onBack = { preview = null }, onNewCollection = { collectionOpen = true })
-                    tab == 1 -> EditorScreen(onBack = { tab = if (detail != null) 2 else 0 }, onSaved = {
+                    preview != null -> SavedStickerScreen(preview!!, onBack = { preview = null }, onNewCollection = { collectionOpen = true }, onDeleted = { preview = null; collectionRefresh++ })
+                    tab == 1 -> EditorScreen(collectionId = detail?.id, onBack = { tab = if (detail != null) 2 else 0 }, onSaved = {
                         preview = it; tab = 2; collectionRefresh++
                     })
                     detail != null -> CollectionDetailScreen(detail!!, onBack = { detail = null },
@@ -90,7 +104,7 @@ fun StickerApp() {
                     category != null -> CategoryScreen(title = category!!, onBack = { category = null },
                         onPremium = { premiumOpen = true }, onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true })
                     tab == 2 -> MyStudioScreen(onCreate = { collectionOpen = true }, refresh = collectionRefresh,
-                        onNavigate = navigate, onPremium = { premiumOpen = true }, onCollection = { detail = it }, onSticker = { preview = it })
+                        onNavigate = navigate, onPremium = { premiumOpen = true }, onCollection = { detail = it }, onSticker = { preview = it }, onUnlock = { unlockOpen = true })
                     tab == 3 -> SettingsScreen(onNavigate = navigate, onPremium = { premiumOpen = true })
                     else -> MixedModeHome(onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true },
                         onViewMore = { category = if (it == "Trendding") "Trending" else it },
@@ -142,9 +156,7 @@ private fun SearchScaffold(onBack: () -> Unit, onUnlock: () -> Unit, onPremium: 
 @Composable
 private fun HomeContent(modifier: Modifier = Modifier, onUnlock: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
-    var favoriteIds by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
-    // These are explicit design fixtures, not records fetched from Supabase.
-    val hasResults = query.isBlank() || "NickNam".contains(query.trim(), ignoreCase = true)
+    val results = StickerCatalog.search(query)
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         item(key = "search") {
             BasicTextField(
@@ -190,20 +202,15 @@ private fun HomeContent(modifier: Modifier = Modifier, onUnlock: () -> Unit) {
                     fontWeight = FontWeight.SemiBold, color = Color(0xFF1F2937))
             }
         }
-        if (!hasResults) {
+        if (results.isEmpty()) {
             item { Text("No stickers found", Modifier.padding(20.dp), fontFamily = Baloo, fontSize = 18.sp) }
         } else {
-            items(4, key = { "recommend-row-$it" }) { row ->
+            items(results.chunked(3).size, key = { "recommend-row-$it" }) { row ->
                 Row(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    repeat(3) { column ->
-                        val id = "recommend-${row * 3 + column}"
-                        StickerCard(id, Modifier.weight(1f), id in favoriteIds, { selected ->
-                            favoriteIds = ArrayList(favoriteIds).apply {
-                                if (selected) { if (id !in this) add(id) } else remove(id)
-                            }
-                        }, onUnlock)
-                    }
+                    val entries = results.chunked(3)[row]
+                    entries.forEach { sticker -> CatalogCard(sticker.id, Modifier.weight(1f), onUnlock) }
+                    repeat(3 - entries.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }

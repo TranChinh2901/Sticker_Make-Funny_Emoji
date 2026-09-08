@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.ui.theme.*
 
-/** Measured against Premium.png (390 × 844). Prices are reference artwork, not Billing offers. */
+/** Weekly: Premium.png; monthly: Premium-1.png (390 × 844). Prices are not live Billing offers. */
 @Composable
 internal fun PremiumScreen(onClose: () -> Unit) {
     var monthly by rememberSaveable { mutableStateOf(false) }
@@ -39,8 +39,8 @@ internal fun PremiumScreen(onClose: () -> Unit) {
         // Preserve the reference width-based scale; short displays scroll instead of squeezing plans.
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Box(Modifier.fillMaxWidth().height(844.dp)) {
-                Image(painterResource(R.drawable.premium_illustration), null,
-                    Modifier.offset(y = 84.dp).fillMaxWidth().height(196.dp), contentScale = ContentScale.FillBounds)
+                Image(painterResource(if (monthly) R.drawable.premium_monthly_illustration else R.drawable.premium_illustration), null,
+                    Modifier.offset(x = 48.dp, y = 44.dp).width(302.dp).height(236.dp), contentScale = ContentScale.Fit)
                 IconButton(onClick = onClose, modifier = Modifier.offset(x = 6.dp, y = 44.dp).size(48.dp)
                     .semantics { contentDescription = "Close Premium" }) {
                     Text("×", fontSize = 32.sp, fontWeight = FontWeight.Medium, color = Color(0xFF4B5563))
@@ -95,7 +95,7 @@ internal fun PremiumScreen(onClose: () -> Unit) {
 @Composable
 private fun PremiumPlan(monthly: Boolean, active: Boolean, modifier: Modifier, onSelect: () -> Unit) {
     Row(modifier.clip(RoundedCornerShape(12.dp))
-        .background(Brush.horizontalGradient(if (active) listOf(Color.White, Color(0xFFD6F5EE)) else listOf(Color.White, Color.White)))
+        .background(Brush.horizontalGradient(if (active) listOf(Color(0xFFF7FFFD), Color(0xFFD9F6F1)) else listOf(Color.White, Color.White)))
         .border(if (active) 2.dp else 0.dp, if (active) StickerGreen else Color.Transparent, RoundedCornerShape(12.dp))
         .semantics { selected = active }.clickable(role = Role.RadioButton, onClick = onSelect)
         .padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {

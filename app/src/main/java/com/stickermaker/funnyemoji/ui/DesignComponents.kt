@@ -48,7 +48,8 @@ internal fun AssetButton(@DrawableRes id: Int, label: String, onClick: () -> Uni
 
 @Composable
 internal fun BrandHeader(title: String? = null, onPremium: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(100.dp).padding(start = 20.dp, end = 20.dp, top = 52.dp, bottom = 20.dp),
+    Row(Modifier.fillMaxWidth().height(100.dp).padding(start = 20.dp, end = 20.dp,
+        top = if (title == null) 52.dp else 40.dp, bottom = if (title == null) 20.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
         if (title == null) CroppedAsset(R.drawable.home_chat_gpt_image18484423_thg720261_photoroom1,
             172.242.dp, 28.dp, 1.197f, 3.1323f, -.1133f, -1.0056f, "Sticker Maker")
@@ -65,7 +66,7 @@ internal fun BrandHeader(title: String? = null, onPremium: () -> Unit) {
 internal fun MainNavigation(selected: Int, onSelect: (Int) -> Unit) {
     val names = listOf("Home", "Customize", "My Studio", "Settings")
     val icons = listOf(if (selected == 0) R.drawable.home_solar_home_angle_bold else R.drawable.settings_group,
-        R.drawable.home_si_ai_edit_alt2_line, R.drawable.home_group, if (selected == 3) R.drawable.settings_lsicon_setting_filled else R.drawable.home_group1)
+        R.drawable.home_si_ai_edit_alt2_line, if (selected == 2) R.drawable.studio_folder_active else R.drawable.home_group, if (selected == 3) R.drawable.settings_lsicon_setting_filled else R.drawable.home_group1)
     Surface(shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp), shadowElevation = 10.dp) {
         Row(Modifier.fillMaxWidth().height(84.2.dp).padding(start = 20.dp, end = 20.dp, top = 21.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             names.forEachIndexed { index, name ->
@@ -74,7 +75,7 @@ internal fun MainNavigation(selected: Int, onSelect: (Int) -> Unit) {
                     Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
                         val leaf = when {
                             index == 0 && selected != 0 -> 21.43.dp
-                            index == 2 -> 21.5.dp
+                            index == 2 -> if (selected == 2) 24.dp else 21.5.dp
                             index == 3 && selected != 3 -> 21.dp
                             else -> 24.dp
                         }

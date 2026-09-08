@@ -35,9 +35,10 @@ import java.io.File
 import java.util.UUID
 
 @Composable
-internal fun EditorScreen(onBack: () -> Unit, onSaved: (SavedSticker) -> Unit) {
+internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSaved: (SavedSticker) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val export = rememberPngExport()
     var doc by remember { mutableStateOf(StickerDocument()) }
     var ready by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<Bitmap?>(null) }
@@ -261,19 +262,30 @@ internal fun EditorScreen(onBack: () -> Unit, onSaved: (SavedSticker) -> Unit) {
             TextButton(enabled = doc.hasContent && !saving, onClick = { change(StickerDocument()); selected = null }) { Text("Clear canvas") }
         }
     }, confirmButton = { TextButton(onClick = { layersOpen = false }) { Text("Done") } })
-    if (saveOpen) AlertDialog(onDismissRequest = { if (!saving) saveOpen = false }, title = { Text("Save sticker") }, text = {
+    if (saveOpen) AlertDialog(onDismissRequest = { if (!saving && !export.busy) saveOpen = false }, title = { Text("Save sticker") }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(name, { name = it.take(80) }, enabled = !saving, label = { Text("Sticker name") }, singleLine = true)
-            Text("Your sticker will be saved to My Studio.")
+            Text(if (collectionId == null) "Your sticker will be saved to My Studio." else "Your sticker will be saved to this collection and My Studio.")
+            OutlinedButton(enabled = !saving && !export.busy && name.isNotBlank(), onClick = {
+                val snapshot = doc
+                export.save(name) {
+                    withContext(Dispatchers.Default) {
+                        renderSticker(context, snapshot).let { bitmap -> try { bitmap.pngBytes() } finally { bitmap.recycle() } }
+                    }
+                }
+            }) { Text("Save PNG to device") }
+            if (export.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            export.message?.let { Text(it) }
             if (saving) LinearProgressIndicator(Modifier.fillMaxWidth())
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
-    }, confirmButton = { TextButton(enabled = !saving && name.isNotBlank(), onClick = {
+    }, confirmButton = { TextButton(enabled = !saving && !export.busy && name.isNotBlank(), onClick = {
         saving = true; error = null
         scope.launch {
             try {
                 val png = withContext(Dispatchers.Default) { renderSticker(context, doc).let { bitmap -> try { bitmap.pngBytes() } finally { bitmap.recycle() } } }
                 val saved = StudioRepository.save(operationId, name, png)
+                collectionId?.let { StudioRepository.add(it, saved.id) }
                 withContext(Dispatchers.IO) { EditorDraft.write(context, StickerDocument()) }
                 saveOpen = false; onSaved(saved)
             } catch (cancelled: CancellationException) { throw cancelled }

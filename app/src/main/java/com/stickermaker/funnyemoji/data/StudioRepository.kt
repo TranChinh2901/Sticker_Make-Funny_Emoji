@@ -19,6 +19,11 @@ private data class Feedback(val id: String, val message: String)
 
 object StudioRepository {
     private val client get() = SupabaseProvider.client
+    suspend fun collectionCounts(): Map<String, Int> {
+        val owner = DemoSession.userId()
+        return client.from("collection_stickers").select { filter { eq("user_id", owner) } }
+            .decodeList<CollectionLink>().groupingBy { it.collectionId }.eachCount()
+    }
     suspend fun list(collectionId: String? = null): List<SavedSticker> {
         val owner = DemoSession.userId()
         val all = client.from("stickers").select {
@@ -63,6 +68,11 @@ object StudioRepository {
         client.from("collection_stickers").delete { filter {
             eq("collection_id", collectionId); eq("sticker_id", stickerId); eq("user_id", owner)
         } }
+    }
+    suspend fun delete(stickerId: String) {
+        val owner = DemoSession.userId()
+        // Links cascade in PostgreSQL. Retain the private object for later orphan cleanup.
+        client.from("stickers").delete { filter { eq("id", stickerId); eq("user_id", owner) } }
     }
     suspend fun image(path: String, thumbnail: Boolean = false): ByteArray {
         val owner = DemoSession.userId()

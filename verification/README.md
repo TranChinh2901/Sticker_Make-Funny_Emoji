@@ -37,3 +37,39 @@ For the current fresh server, execute [`../supabase/setup.sql`](../supabase/setu
 - The first instrumentation run had two test-directory permission failures; corrected to an isolated writable directory under the target UID. The final six tests passed.
 
 Remaining live checks after schema deployment: create/list/rename/delete collection; upload and reload PNG; add/remove collection membership; save/reload language; user-initiated feedback submission; sharing a downloaded private PNG. These depend on the server schema and anonymous sign-in being enabled.
+
+## Continuation — 2026-09-08
+
+Implemented shared catalogue identities and real name/category/tag filtering; a Favorites tab
+in My Studio; a device cache with an outbox for private Supabase favorites and explicit
+retry feedback. Offline unfavorites override old server snapshots, including toggles while
+a request is in flight. Catalogue records remain the bundled Figma fixtures.
+
+Create and saved-sticker Preview now export PNG via Android's document picker. Create can
+export without a cloud connection. A sticker created from a collection is linked to that
+collection before the cloud save flow reports completion. Preview can delete a sticker
+and its collection links after confirmation. Collection/preview navigation survives
+Activity recreation. My Studio's title has enough vertical space to avoid clipping.
+
+New migration: `202609080001_favorites.sql`; also included in `setup.sql` for fresh projects.
+Live REST probes on 2026-09-08 still returned `PGRST205` for collections, stickers and
+settings. This environment has no Supabase administration connector. No deployment or
+successful cloud CRUD is claimed. Figma MCP still reports the Starter-plan call limit;
+the implementation reuses the design context and assets retrieved earlier.
+
+Validation for this continuation:
+
+- `testDebugUnitTest assembleDebug lintDebug`: passed (4 new tests, no lint errors).
+- All 6 existing rendering instrumentation tests passed on emulator-5554.
+- `setup.sql`, existing Studio RLS tests and new `tests/favorites-rls.sql` passed on
+  isolated PostgreSQL 16 with test Auth/Storage stubs; no production database was changed.
+- Emulator UI verified favorite propagation Home → Search → Studio, filtering `Animal`,
+  and favorites surviving force-stop/relaunch.
+- Create → Save → Save PNG to device → Android Downloads saved a 512 × 512 PNG;
+  downloaded file bytes were identical to the prepared renderer output.
+- Screenshots: `favorites-offline.png`, `search-category-results.png`, `export-success.png`.
+  Export sample: `exported-sticker.png`. Images are intentionally ignored by this checkout.
+- Physical device a1146e3e was detected but was not used for these tests.
+
+After deployment, verify favorites sync/retry across sessions, automatic collection linking,
+saved-sticker deletion and private-image export through the real Supabase API.

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -30,7 +31,6 @@ import kotlinx.coroutines.launch
 internal fun CategoryScreen(title: String, onBack: () -> Unit, onSearch: () -> Unit, onUnlock: () -> Unit, onPremium: () -> Unit) {
     val tabs = listOf(title to 88, "Sanrio" to 66, "Snoopy" to 72, "Animal" to 68, "Anime" to 66)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    var favorites by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     val grid = rememberLazyGridState()
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -73,13 +73,12 @@ internal fun CategoryScreen(title: String, onBack: () -> Unit, onSearch: () -> U
             LazyVerticalGrid(columns = GridCells.Fixed(3), state = grid, modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(15, key = { "$selectedTab-$it" }) { index ->
-                    val id = "$title-$selectedTab-$index"
-                    StickerCard(id, Modifier.fillMaxWidth(), id in favorites, { favorite ->
-                        favorites = ArrayList(favorites).apply {
-                            if (favorite) { if (id !in this) add(id) } else remove(id)
-                        }
-                    }, onUnlock)
+                val results = com.stickermaker.funnyemoji.data.StickerCatalog.search(tabs[selectedTab].first)
+                if (results.isEmpty()) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
+                    Text("No stickers in this category yet", Modifier.padding(vertical = 32.dp), fontFamily = Baloo)
+                }
+                items(results, key = { it.id }) { sticker ->
+                    CatalogCard(sticker.id, Modifier.fillMaxWidth(), onUnlock)
                 }
             }
         }
