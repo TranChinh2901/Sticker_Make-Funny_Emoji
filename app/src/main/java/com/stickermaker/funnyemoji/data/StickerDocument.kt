@@ -12,7 +12,7 @@ import java.util.UUID
 @Serializable
 data class StickerLayer(val id: String = UUID.randomUUID().toString(), val kind: String,
     val value: String, val x: Float = .5f, val y: Float = .5f, val scale: Float = 1f,
-    val color: Long = 0xFF1F2937, val outline: Float = 0f)
+    val color: Long = 0xFF1F2937, val outline: Float = 0f, val font: String = "Default")
 @Serializable
 data class InkPoint(val x: Float, val y: Float)
 @Serializable
@@ -60,7 +60,16 @@ internal fun renderSticker(context: Context, document: StickerDocument): Bitmap 
             }
         } else {
             paint.textSize = if (layer.kind == "emoji") 120f else 56f
-            paint.typeface = Typeface.create("sans-serif", Typeface.BOLD)
+            paint.typeface = if (layer.kind == "text") {
+                val resource = when (layer.font) {
+                    "Baloo 2" -> com.stickermaker.funnyemoji.R.font.baloo2
+                    "Inter" -> com.stickermaker.funnyemoji.R.font.inter
+                    "Poppins" -> com.stickermaker.funnyemoji.R.font.poppins_regular
+                    else -> null
+                }
+                resource?.let { androidx.core.content.res.ResourcesCompat.getFont(context, it) }
+                    ?: Typeface.create("sans-serif", Typeface.BOLD)
+            } else Typeface.create("sans-serif", Typeface.BOLD)
             paint.textAlign = Paint.Align.CENTER
             val baseline = -(paint.ascent() + paint.descent()) / 2
             if (layer.outline > 0) {

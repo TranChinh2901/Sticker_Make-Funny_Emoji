@@ -49,6 +49,7 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
     var palette by rememberSaveable { mutableStateOf("Basic") }
     var color by rememberSaveable { mutableLongStateOf(0xFF1F2937) }
     var brushWidth by rememberSaveable { mutableFloatStateOf(8f) }
+    var textFont by rememberSaveable { mutableStateOf("Default") }
     var text by rememberSaveable { mutableStateOf("") }
     var layersOpen by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
@@ -99,16 +100,22 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
     val icons = listOf(R.drawable.editor_hugeicons_background, R.drawable.editor_group,
         R.drawable.editor_solar_text_linear, R.drawable.editor_radix_icons_face, 0, R.drawable.editor_heroicons_paint_brush)
     Column(Modifier.fillMaxSize().background(StickerBackground).navigationBarsPadding().imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 20.dp, top = 40.dp).height(48.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack, enabled = !saving && !importing) { Asset(R.drawable.editor_button_svg, 24.dp, description = "Back") }
-            Text("Create", Modifier.weight(1f), fontFamily = Baloo, fontSize = 24.sp, fontWeight = FontWeight.Bold,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            Button(onClick = { saveOpen = true }, enabled = ready && doc.hasContent && !saving && !importing,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) { Text("Save", fontFamily = Baloo) }
+        Box(Modifier.fillMaxWidth().padding(top = 44.dp).height(48.dp)) {
+            IconButton(onClick = onBack, enabled = !saving && !importing,
+                modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)) {
+                Asset(R.drawable.editor_button_svg, 24.dp, description = "Back")
+            }
+            Text("Create", Modifier.align(Alignment.Center), fontFamily = Baloo, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Box(Modifier.align(Alignment.CenterEnd).padding(end = 20.dp).size(63.dp, 48.dp), contentAlignment = Alignment.Center) {
+                Button(onClick = { saveOpen = true }, enabled = ready && doc.hasContent && !saving && !importing,
+                    modifier = Modifier.size(63.dp, 32.dp), shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFFF3F4F6)),
+                    contentPadding = PaddingValues(0.dp)) { Text("Save", fontFamily = Baloo) }
+            }
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(if (tool == "Background") 40.dp else 20.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(enabled = undo.isNotEmpty() && !saving, onClick = {
                     redo = (redo + doc).takeLast(30); doc = undo.last(); undo = undo.dropLast(1); operationId = UUID.randomUUID().toString()
@@ -157,8 +164,28 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         Surface(shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp), shadowElevation = 6.dp) {
-            Column(Modifier.fillMaxWidth().heightIn(max = 230.dp).verticalScroll(rememberScrollState()).padding(20.dp),
+            Column(Modifier.fillMaxWidth().then(if (tool == "Text") Modifier.height(220.dp) else Modifier.heightIn(max = 230.dp))
+                .verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (tool == "Text") Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f).height(48.dp).border(1.dp, Color(0xFFBFC9C3), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 16.dp), contentAlignment = Alignment.CenterStart) {
+                        androidx.compose.foundation.text.BasicTextField(text, { text = it.take(40) },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !saving,
+                            textStyle = androidx.compose.ui.text.TextStyle(fontFamily = Baloo, fontSize = 18.sp, color = StickerInk),
+                            decorationBox = { field ->
+                                if (text.isEmpty()) Text("Hello!", fontFamily = Baloo, fontSize = 18.sp, color = Color(0xFF9CA3AF))
+                                field()
+                            })
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    IconButton(enabled = text.isNotBlank() && !saving && doc.layers.size < 30, onClick = {
+                        val layer = StickerLayer(kind = "text", value = text.trim(), color = color, font = textFont)
+                        change(doc.copy(layers = doc.layers + layer)); selected = layer.id; text = ""
+                    }, modifier = Modifier.semantics { contentDescription = "Add text" }) {
+                        Image(painterResource(R.drawable.editor_text_confirm), null, Modifier.size(20.dp, 16.dp))
+                    }
+                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     colors.forEach { c ->
                         Box(Modifier.size(32.dp).clip(CircleShape).background(if (c == 0L) Color.White else Color(c))
@@ -202,12 +229,31 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
                     "Import" -> Button(enabled = !importing && !saving, onClick = {
                         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }) { Text("Choose a photo") }
-                    "Text" -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(text, { text = it.take(40) }, Modifier.weight(1f), placeholder = { Text("Your text") }, singleLine = true)
-                        TextButton(enabled = text.isNotBlank() && !saving && doc.layers.size < 30, onClick = {
-                            val layer = StickerLayer(kind = "text", value = text.trim(), color = color)
-                            change(doc.copy(layers = doc.layers + layer)); selected = layer.id; text = ""
-                        }) { Text("Add") }
+                    "Text" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("Default", "Baloo 2", "Inter", "Poppins").chunked(3).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                row.forEach { font ->
+                                    Surface(Modifier.weight(1f).height(40.dp), shape = RoundedCornerShape(8.dp),
+                                        color = Color(0xFFECFAF8), border = BorderStroke(if (font == textFont) 2.dp else 0.dp,
+                                            if (font == textFont) StickerGreen else Color.Transparent)) {
+                                        Box(Modifier.clickable(enabled = !saving) {
+                                            textFont = font
+                                            change(doc.copy(layers = doc.layers.map {
+                                                if (it.id == selected && it.kind == "text") it.copy(font = font) else it
+                                            }))
+                                        }, contentAlignment = Alignment.Center) {
+                                            Text(font, fontFamily = when (font) {
+                                                "Baloo 2" -> Baloo
+                                                "Inter" -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.inter))
+                                                "Poppins" -> androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(R.font.poppins_regular))
+                                                else -> androidx.compose.ui.text.font.FontFamily.Default
+                                            }, fontSize = 14.sp)
+                                        }
+                                    }
+                                }
+                                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
                     }
                     "Sticker" -> Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("😊", "😍", "😂", "😎", "🥳", "❤️", "✨", "🐱").forEach { emoji ->

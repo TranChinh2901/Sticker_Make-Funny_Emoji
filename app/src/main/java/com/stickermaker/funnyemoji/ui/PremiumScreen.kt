@@ -1,6 +1,7 @@
 package com.stickermaker.funnyemoji.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,12 +63,18 @@ internal fun PremiumScreen(onClose: () -> Unit) {
                         Text(text, fontFamily = Baloo, fontSize = 17.sp, lineHeight = 23.8.sp, color = StickerInk)
                     }
                 }
-                PremiumPlan(false, !monthly, Modifier.offset(x = 20.dp, y = 498.dp).width(350.dp).height(68.dp)) { monthly = false }
-                Box(Modifier.offset(x = 240.dp, y = 484.dp).size(83.dp, 24.dp)
-                    .background(StickerGreen, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-                    Text("Best offer", Modifier.offset(y = 2.dp), fontFamily = Baloo, fontSize = 12.sp, color = Color.White)
+                PremiumPlan(false, !monthly, Modifier.offset(x = 20.dp, y = 496.dp).width(350.dp).height(72.dp)) { monthly = false }
+                Box(Modifier.offset(x = 224.dp, y = 488.dp).size(116.dp, 20.dp)
+                    .background(StickerGreen, GenericShape { size, _ ->
+                        moveTo(0f, 0f)
+                        lineTo(size.width, 0f)
+                        lineTo(size.width * 0.80f, size.height)
+                        lineTo(size.width * 0.20f, size.height)
+                        close()
+                    }), contentAlignment = Alignment.Center) {
+                    Text("Best offer", fontFamily = Baloo, fontSize = 12.sp, color = Color.White)
                 }
-                PremiumPlan(true, monthly, Modifier.offset(x = 20.dp, y = 582.dp).width(350.dp).height(68.dp)) { monthly = true }
+                PremiumPlan(true, monthly, Modifier.offset(x = 20.dp, y = 584.dp).width(350.dp).height(72.dp)) { monthly = true }
                 Text("◷ Auto Renewable, Cancel Anytime", Modifier.offset(y = 680.dp).fillMaxWidth(),
                     textAlign = TextAlign.Center, fontFamily = Baloo, fontSize = 12.sp, lineHeight = 20.sp, color = Color(0xFF4B5563))
                 Button(onClick = { message = "Giá là mẫu từ thiết kế. Google Play Billing chưa được cấu hình; chưa phát sinh giao dịch hoặc cấp Premium." },

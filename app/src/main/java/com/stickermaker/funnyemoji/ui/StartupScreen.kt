@@ -15,6 +15,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.stickermaker.funnyemoji.R
+import com.stickermaker.funnyemoji.data.StudioRepository
+import kotlinx.coroutines.CancellationException
 import com.stickermaker.funnyemoji.ui.theme.StickerGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -27,6 +29,8 @@ internal fun StartupScreen(onReady: () -> Unit) {
     val preferences = remember { context.getSharedPreferences("startup", 0) }
     var stage by rememberSaveable { mutableIntStateOf(-1) }
     var language by rememberSaveable { mutableStateOf(preferences.getString("language", "fr") ?: "fr") }
+    var cloudError by remember { mutableStateOf(false) }
+    var retry by remember { mutableIntStateOf(0) }
     val ready by rememberUpdatedState(onReady)
     LaunchedEffect(Unit) {
         if (stage == -1) {
@@ -35,14 +39,30 @@ internal fun StartupScreen(onReady: () -> Unit) {
             stage = 0
         }
     }
-    LaunchedEffect(stage) {
+    LaunchedEffect(stage, retry) {
         if (stage == 4) {
             val stored = withContext(Dispatchers.IO) {
                 preferences.edit().putString("language", language).commit()
             }
-            if (stored) ready() else stage = 3
+            if (stored) {
+                try {
+                    StudioRepository.language(language)
+                    ready()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    cloudError = true
+                }
+            } else stage = 3
         }
     }
+    if (cloudError) AlertDialog(
+        onDismissRequest = { cloudError = false; stage = 3 },
+        title = { Text("Chưa lưu được lên server") },
+        text = { Text("Ngôn ngữ đã lưu trên máy nhưng Supabase chưa nhận được. Kiểm tra mạng, Anonymous Sign-Ins và bảng user_settings.") },
+        confirmButton = { TextButton(onClick = { cloudError = false; retry++ }) { Text("Thử lại") } },
+        dismissButton = { TextButton(onClick = { cloudError = false; ready() }) { Text("Tiếp tục offline") } },
+    )
     BackHandler(stage in 0..4) { if (stage in 1..3) stage-- }
     if (stage == -1) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
