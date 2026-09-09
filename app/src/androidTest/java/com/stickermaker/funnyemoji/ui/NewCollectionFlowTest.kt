@@ -59,7 +59,7 @@ class NewCollectionFlowTest {
             waitFor { findText("New Collection") != null }
             SystemClock.sleep(800)
             // Empty form cannot create a collection.
-            click("Create")
+            click("Create", enabled = false)
             assertEquals(0, attempts.get())
             val edit = descendants(instrumentation.uiAutomation.rootInActiveWindow)
                 .first { it.isEditable }
@@ -80,7 +80,7 @@ class NewCollectionFlowTest {
             screenshot("new-collection-retry.png")
             click("Create")
             waitFor { attempts.get() == 2 }
-            click("Cancel")
+            click("Cancel", enabled = false)
             assertEquals("Saving form cannot be dismissed by Cancel", 0, dismissed.get())
             assertEquals("No duplicate save", 2, attempts.get())
             finishSave.complete(Unit)
@@ -90,17 +90,25 @@ class NewCollectionFlowTest {
         }
     }
 
-    private fun descendants(node: AccessibilityNodeInfo?): List<AccessibilityNodeInfo> =
-        if (node == null) emptyList() else listOf(node) + (0 until node.childCount).flatMap { descendants(node.getChild(it)) }
+    private fun descendants(node: AccessibilityNodeInfo?): List<AccessibilityNodeInfo> {
+        if (node == null || !node.refresh()) return emptyList()
+        return listOf(node) + (0 until node.childCount).flatMap { descendants(node.getChild(it)) }
+    }
 
     private fun findText(text: String) = descendants(instrumentation.uiAutomation.rootInActiveWindow)
         .firstOrNull { it.text?.toString()?.contains(text) == true || it.contentDescription?.toString()?.contains(text) == true }
 
-    private fun click(text: String) {
-        var node = findText(text) ?: error("Missing $text")
-        while (!node.isClickable && node.parent != null) node = node.parent
-        android.util.Log.i("StudioFlowProbe", "[DEBUG-studio] click $text enabled=${node.isEnabled} label=${node.text} description=${node.contentDescription}")
-        if (node.isEnabled) {
+    private fun button(text: String): AccessibilityNodeInfo? {
+        var node = findText(text) ?: return null
+        while (!node.isClickable && node.parent != null) node = node.parent.also { it.refresh() }
+        node.refresh()
+        return node
+    }
+
+    private fun click(text: String, enabled: Boolean = true) {
+        waitFor { button(text)?.isEnabled == enabled }
+        val node = requireNotNull(button(text))
+        if (enabled) {
             val bounds = Rect().also { node.getBoundsInScreen(it) }
             val now = SystemClock.uptimeMillis()
             listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->

@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stickermaker.funnyemoji.ui.theme.Baloo
 
-/** Language preference currently controls intro labels only, not full app localization. */
 @Composable
 internal fun LanguageScreen(language: String, onSelect: (String) -> Unit, onConfirm: () -> Unit) {
     val green = Color(0xFF12AD82)
@@ -74,6 +73,6 @@ internal fun LanguageScreen(language: String, onSelect: (String) -> Unit, onConf
                 }
             }
         }
-        // No copied advertiser creative or simulated ad click target.
+
     }
 }

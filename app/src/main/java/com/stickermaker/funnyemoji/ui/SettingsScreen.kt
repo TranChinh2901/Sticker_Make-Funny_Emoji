@@ -45,7 +45,7 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
                 withContext(Dispatchers.IO) { preferences.edit().putString("language", language).commit() }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { /* Keep the device preference while offline. */ }
+        catch (_: Exception) {}
     }
     Scaffold(containerColor = Color(0xFFF8FAFC), modifier = Modifier.navigationBarsPadding(),
         topBar = { Text("Settings", Modifier.fillMaxWidth().padding(start = 24.dp, top = 48.dp, bottom = 16.dp), fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 24.sp) },

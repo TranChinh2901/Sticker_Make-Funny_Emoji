@@ -145,7 +145,6 @@ internal fun MyStudioScreen(onCreate: () -> Unit, refresh: Int, onNavigate: (Int
     }
 }
 
-/** Exact geometry from My Studio's 390 × 844 SVG exports, with native dynamic content. */
 @Composable
 internal fun MyStudioLayout(
     state: StudioOverview,

@@ -30,14 +30,13 @@ import androidx.compose.ui.unit.sp
 import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.ui.theme.*
 
-/** Weekly: Premium.png; monthly: Premium-1.png (390 × 844). Prices are not live Billing offers. */
 @Composable
 internal fun PremiumScreen(onClose: () -> Unit) {
     var monthly by rememberSaveable { mutableStateOf(false) }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize().navigationBarsPadding()) {
         Image(painterResource(R.drawable.premium_background), null, Modifier.matchParentSize(), contentScale = ContentScale.FillBounds)
-        // Preserve the reference width-based scale; short displays scroll instead of squeezing plans.
+
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Box(Modifier.fillMaxWidth().height(844.dp)) {
                 Image(painterResource(if (monthly) R.drawable.premium_monthly_illustration else R.drawable.premium_illustration), null,

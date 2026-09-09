@@ -30,7 +30,6 @@ internal fun Asset(@DrawableRes id: Int, width: Dp, height: Dp = width, descript
         colorFilter = tint?.let(ColorFilter::tint))
 }
 
-// Preserve the independent viewport and source crop supplied by Figma.
 @Composable
 internal fun CroppedAsset(@DrawableRes id: Int, width: Dp, height: Dp, scaleX: Float, scaleY: Float, left: Float, top: Float, description: String? = null) {
     Box(Modifier.size(width, height).clip(RoundedCornerShape(0.dp))) {

@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-/** Intro artwork is exported; surrounding onboarding controls await full screen exports. */
+
 @Composable
 internal fun StartupScreen(onReady: () -> Unit) {
     val context = LocalContext.current
@@ -34,8 +34,7 @@ internal fun StartupScreen(onReady: () -> Unit) {
     val ready by rememberUpdatedState(onReady)
     LaunchedEffect(Unit) {
         if (stage == -1) {
-            delay(1200) // Branding transition, not network/ad progress.
-            // Demo: replay the full introduction on each fresh app launch.
+            delay(1200)
             stage = 0
         }
     }
@@ -66,8 +65,6 @@ internal fun StartupScreen(onReady: () -> Unit) {
     BackHandler(stage in 0..4) { if (stage in 1..3) stage-- }
     if (stage == -1) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            // Use the same centered Crop transform for artwork and progress. Anchoring
-            // progress to system insets separately can overlap text baked into the art.
             val scale = maxOf(maxWidth / 390.dp, maxHeight / 844.dp)
             val artLeft = (maxWidth - 390.dp * scale) / 2
             val artTop = (maxHeight - 844.dp * scale) / 2
@@ -87,7 +84,6 @@ internal fun StartupScreen(onReady: () -> Unit) {
             } else {
                 val index = (stage - 1).coerceIn(0, 2)
                 val artwork = listOf(R.drawable.onboarding_0, R.drawable.onboarding_1, R.drawable.onboarding_2)
-                // Draw controls above the art, not after a full-height image in a scrolling column.
                 Image(painterResource(artwork[index]), "Onboarding ${index + 1}",
                     Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             }

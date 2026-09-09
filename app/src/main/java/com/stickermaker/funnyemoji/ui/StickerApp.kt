@@ -39,7 +39,6 @@ import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.launch
 
-/** Figma navigation with private studio and a shared catalogue favorite state. */
 @Composable
 fun StickerApp() {
     var startupComplete by rememberSaveable { mutableStateOf(false) }
@@ -236,7 +235,6 @@ internal fun StickerCard(
 ) {
     Box(modifier.height(140.dp).border(1.dp, StickerGreen, RoundedCornerShape(16.dp))
         .background(Color.White, RoundedCornerShape(16.dp))) {
-        // Independent slots prevent font metrics from squeezing the label in a fixed-height Column.
         Box(Modifier.align(Alignment.TopCenter).padding(top = 14.dp).size(70.dp), contentAlignment = Alignment.Center) {
             Asset(R.drawable.home_reference_sticker, 70.dp, description = "NickNam sticker")
         }

@@ -15,7 +15,6 @@ internal class PngExport(
     val save: (String, suspend () -> ByteArray) -> Unit,
 )
 
-/** Render/download before opening the system picker; retain that exact PNG through recreation. */
 @Composable
 internal fun rememberPngExport(): PngExport {
     val context = LocalContext.current

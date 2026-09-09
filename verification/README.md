@@ -111,3 +111,51 @@ passed (4 unit tests, no lint errors). Both fresh APKs were installed on
 the two-state visual/action check). Final screenshots were inspected side by
 side with the browser-rendered SVGs. This pass does not establish physical-device
 coverage or remote Supabase CRUD verification.
+
+## New Collection and live Studio persistence — 2026-09-09
+
+Figma MCP successfully returned design context for New Collection `353:3180`
+in this pass. The local `New Collection.svg` export supplies the exact vector
+image-picker and custom-color glyphs. The sheet now uses Be Vietnam Pro,
+#F5FFFD surface, 32dp top corners, left-aligned 20sp title, 58dp name field,
+56dp thumbnail, 40dp palette swatches, and 48dp Create/Cancel controls.
+The default custom background is #FDF2F8; custom hex colors can be edited.
+An unselected thumbnail uses a placeholder rather than persisting Figma's sample photo.
+Create requires a nonblank name and waits for image decoding. Success refreshes
+My Studio and closes the sheet; failure retains all choices for retry. Dismissal
+is blocked during saving, including dragging the sheet away.
+
+The remote tables now respond successfully (HTTP 200), superseding the older
+PGRST205 observations above. `StudioCloudTest` passed against the configured
+Supabase from emulator-5554: thumbnail and PNG upload/download byte comparison,
+collection creation/list/rename, idempotent membership addition, count refresh,
+removal, and collection deletion preserving the saved sticker. The test cleaned
+its own records and uploaded objects. It is opt-in to prevent ordinary test runs
+from writing to a configured server:
+
+```sh
+adb -s emulator-5554 shell am instrument -w \
+  -e class com.stickermaker.funnyemoji.data.StudioCloudTest \
+  -e liveSupabase true \
+  com.stickermaker.funnyemoji.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+`NewCollectionFlowTest` injects a failing then suspended save into the production
+sheet; it checks name trimming, chosen color, disabled empty submit, input retained
+on error, blocked Cancel during saving, and exactly one success/dismiss callback.
+This fixture test does not access Supabase.
+
+Screenshots: `new-collection-empty.png`, `new-collection-form.png`,
+`new-collection-retry.png`, and `new-collection-comparison.png`. The comparison
+shows the 390dp Figma artboard beside the emulator's approximately 411dp-wide
+Android viewport scaled to the same image width; system bars and responsive
+sheet position therefore differ. An empty name disables Create, and the thumbnail
+placeholder remains until the user chooses an image. These are functional states,
+not the sample thumbnail and enabled button depicted in the static design.
+
+Final checks passed: `assembleDebug assembleDebugAndroidTest lintDebug testDebugUnitTest`
+(4 unit tests, no lint errors), 8 ordinary instrumentation tests on emulator-5554,
+and the separate opt-in Supabase integration test (1 test). The accessibility
+harness refreshes cached nodes and waits for the expected enabled state before
+interaction; the earlier failure was a stale disabled flag on an enabled Create
+button. Debug logging was removed. Physical-device coverage was not performed.

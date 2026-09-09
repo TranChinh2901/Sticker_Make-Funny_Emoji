@@ -26,7 +26,6 @@ import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.launch
 
-/** Category Shimeji List.svg. Sticker rows are local design fixtures until backend mapping exists. */
 @Composable
 internal fun CategoryScreen(title: String, onBack: () -> Unit, onSearch: () -> Unit, onUnlock: () -> Unit, onPremium: () -> Unit) {
     val tabs = listOf(title to 88, "Sanrio" to 66, "Snoopy" to 72, "Animal" to 68, "Anime" to 66)

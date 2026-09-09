@@ -33,7 +33,6 @@ import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.launch
 
-/** Coordinates follow Mixed Mode.svg's 390-unit artboard. Uses design fixtures, not server records. */
 @Composable
 internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMore: (String) -> Unit, onPremium: () -> Unit, onNavigate: (Int) -> Unit) {
     val snackbar = remember { SnackbarHostState() }

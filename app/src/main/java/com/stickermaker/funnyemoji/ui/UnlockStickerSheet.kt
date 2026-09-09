@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.sp
 import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.ui.theme.*
 
-/** Unlock Sticker.svg: a 405-unit sheet, not a full-screen destination. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun UnlockStickerSheet(onDismiss: () -> Unit, onPremium: () -> Unit) {
