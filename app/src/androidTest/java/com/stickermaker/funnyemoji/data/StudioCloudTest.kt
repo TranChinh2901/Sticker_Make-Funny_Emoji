@@ -27,6 +27,7 @@ class StudioCloudTest {
             bitmap.recycle()
             var collection: StickerCollection? = null
             var sticker: SavedSticker? = null
+            var secondSticker: SavedSticker? = null
             try {
                 collection = CollectionRepository.create(title, "#E7F7F3", png)
                 assertTrue(CollectionRepository.list().any { it.id == collection.id })
@@ -41,16 +42,30 @@ class StudioCloudTest {
                 assertEquals(listOf(sticker.id), StudioRepository.list(collection.id).map { it.id })
                 StudioRepository.remove(collection.id, sticker.id)
                 assertTrue(StudioRepository.list(collection.id).isEmpty())
-                StudioRepository.add(collection.id, sticker.id)
+                val invalidBatch = runCatching { StudioRepository.addAll(collection.id, setOf(sticker.id, UUID.randomUUID().toString())) }
+                assertTrue("Invalid membership rejects the batch", invalidBatch.isFailure)
+                assertTrue("A failed batch must not partially add stickers", StudioRepository.list(collection.id).isEmpty())
+                secondSticker = StudioRepository.save(UUID.randomUUID().toString(), "$title second", png)
+                val batch = setOf(sticker.id, secondSticker.id)
+                StudioRepository.addAll(collection.id, batch)
+                StudioRepository.addAll(collection.id, batch)
+                assertEquals(batch, StudioRepository.list(collection.id).map { it.id }.toSet())
+                assertEquals(2, StudioRepository.collectionCounts()[collection.id])
+                assertTrue(collection.id in StudioRepository.collectionsFor(sticker.id))
                 CollectionRepository.delete(collection.id)
                 assertFalse(CollectionRepository.list().any { it.id == collection.id })
                 assertTrue("Deleting a collection must retain its stickers", StudioRepository.list().any { it.id == sticker.id })
                 assertNull(StudioRepository.collectionCounts()[collection.id])
+                assertFalse(collection.id in StudioRepository.collectionsFor(sticker.id))
             } finally {
                 // Only test-created IDs and objects are eligible for cleanup.
                 collection?.let {
                     CollectionRepository.delete(it.id)
                     it.thumbnailPath?.let { path -> SupabaseProvider.client.storage.from("collection-thumbnails").delete(listOf(path)) }
+                }
+                secondSticker?.let {
+                    StudioRepository.delete(it.id)
+                    SupabaseProvider.client.storage.from("sticker-images").delete(listOf(it.imagePath))
                 }
                 StudioRepository.delete(stickerId)
                 sticker?.let { SupabaseProvider.client.storage.from("sticker-images").delete(listOf(it.imagePath)) }

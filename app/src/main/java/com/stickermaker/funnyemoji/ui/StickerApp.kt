@@ -92,7 +92,7 @@ fun StickerApp() {
             screenState.SaveableStateProvider(key) {
                 when {
                     premiumOpen -> PremiumScreen(onClose = { premiumOpen = false })
-                    preview != null -> SavedStickerScreen(preview!!, onBack = { preview = null }, onNewCollection = { collectionOpen = true }, onDeleted = { preview = null; collectionRefresh++ })
+                    preview != null -> SavedStickerScreen(preview!!, onBack = { preview = null }, onNewCollection = { collectionOpen = true }, onDeleted = { preview = null; collectionRefresh++ }, onChanged = { collectionRefresh++ })
                     tab == 1 -> EditorScreen(collectionId = detail?.id, onBack = { tab = if (detail != null) 2 else 0 }, onSaved = {
                         preview = it; tab = 2; collectionRefresh++
                     })

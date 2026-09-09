@@ -129,70 +129,25 @@ internal fun CollectionDetailScreen(collection: StickerCollection, onBack: () ->
         onAdded = { revision++; onChanged() }, onCreate = { picker = false; onCreate() })
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun StickerPicker(collectionId: String, existing: Set<String>, onDismiss: () -> Unit, onAdded: () -> Unit, onCreate: () -> Unit) {
-    val scope = rememberCoroutineScope()
-    var items by remember { mutableStateOf<List<SavedSticker>>(emptyList()) }
-    var loading by remember { mutableStateOf(true) }
-    var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var retry by remember { mutableIntStateOf(0) }
-    LaunchedEffect(retry) {
-        loading = true; error = null
-        try { items = StudioRepository.list() }
-        catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { error = "Không thể tải sticker." }
-        finally { loading = false }
-    }
-    ModalBottomSheet(onDismissRequest = { if (!busy) onDismiss() },
-        containerColor = androidx.compose.ui.graphics.Color(0xFFF5FFFD),
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
-            confirmValueChange = { it != SheetValue.Hidden || !busy })) {
-        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 540.dp).padding(horizontal = 20.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
-            item { Text("Add to Collection", fontFamily = Baloo, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
-            item { Button(enabled = !busy, onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("Create a new sticker") } }
-            if (loading || busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            if (error != null) item { Text(error!!); TextButton(onClick = { retry++ }) { Text("Retry") } }
-            if (!loading && items.isEmpty() && error == null) item { Text("No saved stickers yet. Create your first one.", Modifier.padding(vertical = 20.dp)) }
-            items(items, key = { it.id }) { sticker ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PrivateImage(sticker.imagePath, Modifier.size(56.dp), label = sticker.name)
-                    Text(sticker.name, Modifier.weight(1f).padding(12.dp))
-                    TextButton(enabled = !busy && !loading && sticker.id !in existing, onClick = {
-                        busy = true; error = null
-                        scope.launch {
-                            try { StudioRepository.add(collectionId, sticker.id); onAdded(); onDismiss() }
-                            catch (cancelled: CancellationException) { throw cancelled }
-                            catch (_: Exception) { error = "Không thể thêm sticker. Thử lại." }
-                            finally { busy = false }
-                        }
-                    }) { Text(if (sticker.id in existing) "Added" else "Add") }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNewCollection: () -> Unit, onDeleted: () -> Unit) {
+internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNewCollection: () -> Unit, onDeleted: () -> Unit, onChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var collections by remember { mutableStateOf<List<StickerCollection>>(emptyList()) }
     var chooseCollection by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var delete by rememberSaveable { mutableStateOf(false) }
     val export = rememberPngExport()
+    androidx.activity.compose.BackHandler(enabled = busy || export.busy) {}
     Column(Modifier.fillMaxSize().background(StickerBackground).navigationBarsPadding()) {
-        StudioHeader("Preview sticker", onBack) {
+        StudioHeader("Preview sticker", { if (!busy && !export.busy) onBack() }) {
             TextButton(enabled = !busy && !export.busy, onClick = { error = null; delete = true }) { Text("Delete") }
         }
         Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             PrivateImage(sticker.imagePath, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp)).background(androidx.compose.ui.graphics.Color.White), label = sticker.name)
             Text(sticker.name, fontFamily = Baloo, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-            Button(enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), onClick = {
+            Button(enabled = !busy && !export.busy, modifier = Modifier.fillMaxWidth().height(56.dp), onClick = {
                 busy = true; error = null
                 scope.launch {
                     try {
@@ -210,14 +165,8 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
                     finally { busy = false }
                 }
             }) { Text("Share PNG") }
-            Button(enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), onClick = {
-                busy = true; error = null
-                scope.launch {
-                    try { collections = CollectionRepository.list(); chooseCollection = true }
-                    catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { error = "Không thể tải bộ sưu tập." }
-                    finally { busy = false }
-                }
+            Button(enabled = !busy && !export.busy, modifier = Modifier.fillMaxWidth().height(56.dp), onClick = {
+                chooseCollection = true
             }) { Text("Add to Collection") }
             OutlinedButton(enabled = !busy && !export.busy, modifier = Modifier.fillMaxWidth().height(52.dp), onClick = {
                 export.save(sticker.name) { StudioRepository.image(sticker.imagePath) }
@@ -240,22 +189,9 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
             }
         }) { Text("Delete") } },
         dismissButton = { TextButton(enabled = !busy, onClick = { delete = false }) { Text("Cancel") } })
-    if (chooseCollection) AlertDialog(onDismissRequest = { if (!busy) chooseCollection = false }, title = { Text("Choose collection") }, text = {
-        Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-            if (collections.isEmpty()) Text("Create a collection to organize your stickers.")
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            collections.forEach { collection ->
-                TextButton(enabled = !busy, onClick = {
-                    busy = true; error = null
-                    scope.launch {
-                        try { StudioRepository.add(collection.id, sticker.id); chooseCollection = false; message = "Added to ${collection.name}" }
-                        catch (cancelled: CancellationException) { throw cancelled }
-                        catch (_: Exception) { error = "Không thể thêm sticker. Thử lại." }
-                        finally { busy = false }
-                    }
-                }) { Text(collection.name) }
-            }
-        }
-    }, confirmButton = { TextButton(enabled = !busy, onClick = { chooseCollection = false; onNewCollection() }) { Text("New Collection") } },
-        dismissButton = { TextButton(enabled = !busy, onClick = { chooseCollection = false }) { Text("Cancel") } })
+    if (chooseCollection) CollectionPicker(
+        stickerId = sticker.id, onDismiss = { chooseCollection = false },
+        onCreate = { chooseCollection = false; onNewCollection() },
+        onAdded = { collection -> message = "Added to ${collection.name}"; onChanged() },
+    )
 }

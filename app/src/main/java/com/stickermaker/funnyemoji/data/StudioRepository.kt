@@ -60,8 +60,19 @@ object StudioRepository {
     }
 
     suspend fun add(collectionId: String, stickerId: String) {
+        addAll(collectionId, setOf(stickerId))
+    }
+    /** One PostgREST statement: all selected memberships commit together or fail together. */
+    suspend fun addAll(collectionId: String, stickerIds: Set<String>) {
+        require(stickerIds.isNotEmpty())
         DemoSession.userId()
-        client.from("collection_stickers").upsert(CollectionLink(collectionId, stickerId))
+        client.from("collection_stickers").upsert(stickerIds.map { CollectionLink(collectionId, it) })
+    }
+    suspend fun collectionsFor(stickerId: String): Set<String> {
+        val owner = DemoSession.userId()
+        return client.from("collection_stickers").select {
+            filter { eq("sticker_id", stickerId); eq("user_id", owner) }
+        }.decodeList<CollectionLink>().map { it.collectionId }.toSet()
     }
     suspend fun remove(collectionId: String, stickerId: String) {
         val owner = DemoSession.userId()
