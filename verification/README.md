@@ -73,3 +73,41 @@ Validation for this continuation:
 
 After deployment, verify favorites sync/retry across sessions, automatic collection linking,
 saved-sticker deletion and private-image export through the real Supabase API.
+
+## My Studio fidelity pass — 2026-09-09
+
+Source exports: `pdf/Sticker maker/Mixed Mode-1.svg` (frame `343:8610`, empty)
+and `Mixed Mode-2.svg` (frame `347:14158`, populated). Figma MCP's design-context
+request was retried and returned the Starter quota limit. These local Figma SVG
+exports are the source for this pass; a current live Figma revision was not available.
+
+My Studio now follows the original overview: four 83.5 × 87 statistic tiles at
+x=16/y=100 with 8-unit gaps; the 350 × 72 New Collection banner at (20,207);
+My Collections heading; a 350 × 190 empty panel or two-column 167 × 163.22
+collection cards with 24-unit corners. The title, statistic artwork, plus/folder,
+overflow and navigation glyphs are extracted from the SVG nodes. Browser rendering
+preserves SVG masks and image patterns that Cairo rendered incorrectly.
+Text and dynamic content use Compose; body fonts are bundled Be Vietnam Pro.
+
+Recent/Favorites/Drafts/Collections counters are interactive and use app data.
+The populated design's sample shows a zero Collections counter despite one card;
+the app displays the actual collection count. Loading and failure use explicit
+states instead of reporting that collections are empty.
+
+`MyStudioVisualTest` renders the production layout at 390 × 844 with empty and
+populated fixtures, captures both screenshots, and checks Create Collection,
+New Collection, opening a card and the independent overflow action. The fixture
+thumbnail is confined to the visual test. No database seeding is involved.
+Android system bars are hidden for the comparison; the SVG's simulated iOS bar
+is not rendered by the app.
+
+Artifacts: `my-studio-empty.png`, `my-studio-populated.png`,
+`my-studio-comparison.png` (Figma export on the left, Compose on the right).
+The image files remain local under this checkout's existing ignore rules.
+
+Final validation: `assembleDebug assembleDebugAndroidTest lintDebug testDebugUnitTest`
+passed (4 unit tests, no lint errors). Both fresh APKs were installed on
+`emulator-5554`; the complete instrumentation suite passed (7 tests, including
+the two-state visual/action check). Final screenshots were inspected side by
+side with the browser-rendered SVGs. This pass does not establish physical-device
+coverage or remote Supabase CRUD verification.

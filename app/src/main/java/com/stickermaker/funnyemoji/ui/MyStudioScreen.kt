@@ -198,14 +198,14 @@ internal fun MyStudioLayout(
                     Box(Modifier.size(48.dp).background(Color.White.copy(alpha = .2f), CircleShape), contentAlignment = Alignment.Center) {
                         Asset(R.drawable.studio_plus, 24.dp)
                     }
-                    Column {
-                        StudioLabel("New Collection", 16, weight = FontWeight.Bold, color = Color.White, lineHeight = 24)
+                    Column(Modifier.requiredHeight(49.dp).offset(y = 3.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        StudioLabel("New Collection", 16, weight = FontWeight.Bold, color = Color.White, lineHeight = 24, letterSpacing = -.15f)
                         StudioLabel("Create pack", 14, color = Color.White.copy(alpha = .8f), lineHeight = 21)
                     }
                 }
                 Spacer(Modifier.height(24.dp))
                 StudioLabel(when (section) { "FAVORITES" -> "Favorites"; "RECENT" -> "Recent Stickers"; else -> "My Collections" },
-                    18, Modifier.padding(horizontal = 24.dp).height(27.dp), FontWeight.Bold, lineHeight = 27)
+                    18, Modifier.padding(horizontal = 24.dp).offset(y = .5.dp).height(27.dp), FontWeight.Bold, lineHeight = 27)
                 Spacer(Modifier.height(18.dp))
             }
             if (section == "COLLECTIONS") {
@@ -216,7 +216,7 @@ internal fun MyStudioLayout(
                         Box(Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(190.dp)
                             .background(Color.White, RoundedCornerShape(12.dp)).border(1.dp, Color(0xFFF3F4F6), RoundedCornerShape(12.dp))) {
                             Box(Modifier.align(Alignment.TopCenter).padding(top = 20.dp)) { Asset(R.drawable.studio_empty_folder, 40.dp) }
-                            StudioLabel("No collections yet", 16, Modifier.align(Alignment.TopCenter).padding(top = 67.dp), FontWeight.Bold, lineHeight = 24)
+                            StudioLabel("No collections yet", 16, Modifier.align(Alignment.TopCenter).padding(top = 69.5.dp), FontWeight.Bold, lineHeight = 24, letterSpacing = -.22f)
                             Row(Modifier.align(Alignment.TopCenter).padding(top = 113.dp).width(227.42.dp).height(56.dp)
                                 .clip(CircleShape).background(StudioGreen).clickable(role = Role.Button, onClick = onCreate),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {

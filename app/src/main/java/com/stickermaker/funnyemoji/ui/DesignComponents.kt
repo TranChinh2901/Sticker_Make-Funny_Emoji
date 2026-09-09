@@ -65,15 +65,18 @@ internal fun BrandHeader(title: String? = null, onPremium: () -> Unit) {
 @Composable
 internal fun MainNavigation(selected: Int, onSelect: (Int) -> Unit) {
     val names = listOf("Home", "Customize", "My Studio", "Settings")
-    val icons = listOf(if (selected == 0) R.drawable.home_solar_home_angle_bold else R.drawable.settings_group,
+    val icons = if (selected == 2) listOf(R.drawable.studio_nav_home, R.drawable.studio_nav_customize,
+        R.drawable.studio_nav_folder, R.drawable.studio_nav_settings) else listOf(if (selected == 0) R.drawable.home_solar_home_angle_bold else R.drawable.settings_group,
         R.drawable.home_si_ai_edit_alt2_line, if (selected == 2) R.drawable.studio_folder_active else R.drawable.home_group, if (selected == 3) R.drawable.settings_lsicon_setting_filled else R.drawable.home_group1)
     Surface(shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp), shadowElevation = 10.dp) {
-        Row(Modifier.fillMaxWidth().height(84.2.dp).padding(start = 20.dp, end = 20.dp, top = 21.dp, bottom = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(84.2.dp).padding(start = 20.dp, end = 20.dp, top = 21.dp, bottom = 20.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             names.forEachIndexed { index, name ->
                 Column(Modifier.weight(1f).fillMaxHeight().clickable(role = Role.Tab) { onSelect(index) },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
                         val leaf = when {
+                            selected == 2 -> 24.dp
                             index == 0 && selected != 0 -> 21.43.dp
                             index == 2 -> if (selected == 2) 24.dp else 21.5.dp
                             index == 3 && selected != 3 -> 21.dp
@@ -82,7 +85,8 @@ internal fun MainNavigation(selected: Int, onSelect: (Int) -> Unit) {
                         Asset(icons[index], leaf, tint = if (selected == index) StickerGreen else Color(0xFF878787))
                     }
                     Spacer(Modifier.height(4.dp))
-                    Text(name, fontSize = 11.4.sp, fontFamily = Inter, maxLines = 1,
+                    Text(name, fontSize = 11.4.sp, lineHeight = 15.2.sp, fontFamily = Inter, maxLines = 1,
+                        style = androidx.compose.ui.text.TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)),
                         color = if (selected == index) Color(0xFF009A8A) else Color(0xFF878787),
                         fontWeight = if (selected == index) FontWeight.Bold else FontWeight.Medium)
                 }
