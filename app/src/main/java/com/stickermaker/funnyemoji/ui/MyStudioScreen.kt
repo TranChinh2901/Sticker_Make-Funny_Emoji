@@ -263,7 +263,7 @@ private fun StudioMessage(title: String, subtitle: String, onRetry: (() -> Unit)
 }
 
 @Composable
-private fun StudioLabel(value: String, size: Int, modifier: Modifier = Modifier, weight: FontWeight = FontWeight.Normal,
+internal fun StudioLabel(value: String, size: Int, modifier: Modifier = Modifier, weight: FontWeight = FontWeight.Normal,
     color: Color = StudioText, lineHeight: Int = size * 3 / 2, maxLines: Int = Int.MAX_VALUE, letterSpacing: Float = 0f) {
     Text(value, modifier, color = color, fontFamily = StudioFont, fontSize = size.sp, fontWeight = weight,
         lineHeight = lineHeight.sp, maxLines = maxLines, overflow = TextOverflow.Ellipsis,

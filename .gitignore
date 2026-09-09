@@ -34,6 +34,7 @@ supabase/.branches/
 pdf/
 *.traineddata
 design/
+verification/
 
 # Image assets and drawable-nodpi
 *.png

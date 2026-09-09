@@ -76,6 +76,7 @@ internal fun CollectionDetailScreen(collection: StickerCollection, onBack: () ->
     var picker by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var remove by remember { mutableStateOf<SavedSticker?>(null) }
+    androidx.activity.compose.BackHandler(enabled = busy) {}
     fun mutate(action: suspend () -> Unit) {
         busy = true; error = null
         scope.launch {
@@ -92,62 +93,25 @@ internal fun CollectionDetailScreen(collection: StickerCollection, onBack: () ->
         catch (_: Exception) { error = "Không thể tải sticker. Kiểm tra kết nối rồi thử lại." }
         finally { loading = false }
     }
-    Scaffold(containerColor = StickerBackground, modifier = Modifier.navigationBarsPadding(),
-        topBar = { StudioHeader(name, { if (!busy) onBack() }) {
+    CollectionDetailLayout(
+        collection = collection.copy(name = name), stickers = stickers, loading = loading,
+        busy = busy, error = error, onBack = { if (!busy) onBack() },
+        onAdd = { picker = true }, onPreview = onPreview, onRemove = { remove = it },
+        onRetry = { revision++ },
+        options = {
             Box {
-                AssetButton(R.drawable.detail_mingcute_more2_line, "Collection options", { more = true })
+                IconButton(enabled = !busy, onClick = { more = true }) {
+                    Asset(R.drawable.detail_mingcute_more2_line, 24.dp, description = "Collection options")
+                }
                 DropdownMenu(more, { more = false }) {
-                    DropdownMenuItem(text = { Text("Rename collection") }, onClick = { more = false; draftName = name; rename = true })
-                    DropdownMenuItem(text = { Text("Delete collection") }, onClick = { more = false; delete = true })
+                    DropdownMenuItem(text = { Text("Rename collection") }, enabled = !busy,
+                        onClick = { more = false; draftName = name; rename = true })
+                    DropdownMenuItem(text = { Text("Delete collection") }, enabled = !busy,
+                        onClick = { more = false; delete = true })
                 }
             }
-        } }, bottomBar = {
-            Button(onClick = { picker = true }, enabled = !busy, shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().padding(16.dp).height(52.dp)) {
-                Asset(R.drawable.detail_svg1, 20.dp); Spacer(Modifier.width(8.dp)); Text("Add More Stickers")
-            }
-        }) { padding ->
-        LazyColumn(Modifier.padding(padding).fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            item {
-                Surface(shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, androidx.compose.ui.graphics.Color(0xFFE7F7F3)), shadowElevation = 1.dp) {
-                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        val color = runCatching { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(collection.backgroundColor)) }.getOrDefault(StickerBackground)
-                        PrivateImage(collection.thumbnailPath, Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)).background(color), true, "Collection thumbnail")
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(name, fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text(if (loading) "Loading…" else "${stickers.size} stickers", fontFamily = Inter, fontSize = 14.sp)
-                            Text("My collection", color = StickerGreen, fontFamily = Inter, fontSize = 14.sp)
-                        }
-                    }
-                }
-            }
-            item { Text("Stickers", fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 18.sp) }
-            if (error != null) item { Column { Text(error!!, color = MaterialTheme.colorScheme.error); TextButton(onClick = { revision++ }) { Text("Retry") } } }
-            if (loading || busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            item {
-                OutlinedButton(onClick = { picker = true }, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, StickerGreen), modifier = Modifier.size(104.dp)) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Box(Modifier.size(28.dp).background(StickerGreen, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) { Asset(R.drawable.detail_svg, 17.5.dp) }
-                        Text("Add")
-                    }
-                }
-            }
-            items(stickers.chunked(3), key = { it.first().id }) { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { sticker ->
-                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, StickerGreen)) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                PrivateImage(sticker.imagePath, Modifier.fillMaxWidth().aspectRatio(1f).clickable { onPreview(sticker) }.padding(8.dp), label = sticker.name)
-                                Text(sticker.name, maxLines = 1, fontFamily = Baloo, fontSize = 12.sp)
-                                TextButton(enabled = !busy, onClick = { remove = sticker }) { Text("Remove", fontSize = 11.sp) }
-                            }
-                        }
-                    }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-        }
-    }
+        },
+    )
     if (rename) AlertDialog(onDismissRequest = { if (!busy) rename = false }, title = { Text("Rename collection") }, text = {
         Column { OutlinedTextField(draftName, { draftName = it.take(80) }, enabled = !busy, singleLine = true); error?.let { Text(it) } }
     }, confirmButton = { TextButton(enabled = !busy && draftName.isNotBlank(), onClick = { mutate {
@@ -181,7 +145,10 @@ private fun StickerPicker(collectionId: String, existing: Set<String>, onDismiss
         catch (_: Exception) { error = "Không thể tải sticker." }
         finally { loading = false }
     }
-    ModalBottomSheet(onDismissRequest = { if (!busy) onDismiss() }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(onDismissRequest = { if (!busy) onDismiss() },
+        containerColor = androidx.compose.ui.graphics.Color(0xFFF5FFFD),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
+            confirmValueChange = { it != SheetValue.Hidden || !busy })) {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 540.dp).padding(horizontal = 20.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             item { Text("Add to Collection", fontFamily = Baloo, fontSize = 24.sp, fontWeight = FontWeight.Bold) }
             item { Button(enabled = !busy, onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("Create a new sticker") } }
@@ -192,7 +159,7 @@ private fun StickerPicker(collectionId: String, existing: Set<String>, onDismiss
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     PrivateImage(sticker.imagePath, Modifier.size(56.dp), label = sticker.name)
                     Text(sticker.name, Modifier.weight(1f).padding(12.dp))
-                    TextButton(enabled = !busy && sticker.id !in existing, onClick = {
+                    TextButton(enabled = !busy && !loading && sticker.id !in existing, onClick = {
                         busy = true; error = null
                         scope.launch {
                             try { StudioRepository.add(collectionId, sticker.id); onAdded(); onDismiss() }
