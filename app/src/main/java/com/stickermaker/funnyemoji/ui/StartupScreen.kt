@@ -99,7 +99,7 @@ internal fun StartupScreen(onReady: () -> Unit) {
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
                     .padding(horizontal = 28.dp, vertical = 12.dp).fillMaxWidth().height(56.dp),
             ) {
-                Text(if (stage >= 3) { if (vi) "Bắt đầu" else "Get Started" } else { if (vi) "Tiếp tục" else "Continue" })
+                Text(if (stage >= 3) { if (vi) "Bắt đầu" else "Get Started" } else { if (vi) "Tiếp tục" else "Open" })
             }
         }
     }
