@@ -31,11 +31,14 @@ import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.data.*
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.util.UUID
 
 @Composable
-internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSaved: (SavedSticker) -> Unit) {
+internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSaved: (SavedSticker) -> Unit,
+    saveDraft: ((StickerDocument) -> Unit)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val export = rememberPngExport()
@@ -53,6 +56,13 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
     var text by rememberSaveable { mutableStateOf("") }
     var layersOpen by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
+    val draftMutex = remember { Mutex() }
+    suspend fun persistDraft(snapshot: StickerDocument) = withContext(Dispatchers.IO) {
+        draftMutex.withLock {
+            ensureActive()
+            if (saveDraft != null) saveDraft(snapshot) else EditorDraft.write(context, snapshot)
+        }
+    }
     var importing by remember { mutableStateOf(false) }
     var saveOpen by remember { mutableStateOf(false) }
     var name by rememberSaveable { mutableStateOf("My sticker") }
@@ -70,12 +80,24 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
     }
     LaunchedEffect(doc, ready) {
         if (ready) {
-            preview = withContext(Dispatchers.Default) { renderSticker(context, doc) }
-            try { withContext(Dispatchers.IO) { EditorDraft.write(context, doc) } }
+            try { persistDraft(doc) }
             catch (_: java.io.IOException) { error = "Không thể lưu bản nháp trên thiết bị." }
+            preview = withContext(Dispatchers.Default) { renderSticker(context, doc) }
         }
     }
-    BackHandler { if (!saving && !importing) onBack() }
+    val leaveEditor: () -> Unit = {
+        if (ready && !saving && !importing && !export.busy) {
+            saving = true; error = null
+            val snapshot = doc
+            scope.launch {
+                try { persistDraft(snapshot); onBack() }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { error = "Couldn't save your draft. Please try Back again." }
+                finally { saving = false }
+            }
+        }
+    }
+    BackHandler(onBack = leaveEditor)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) {
             importing = true; error = null
@@ -101,7 +123,7 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
         R.drawable.editor_solar_text_linear, R.drawable.editor_radix_icons_face, 0, R.drawable.editor_heroicons_paint_brush)
     Column(Modifier.fillMaxSize().background(StickerBackground).navigationBarsPadding().imePadding()) {
         Box(Modifier.fillMaxWidth().padding(top = 44.dp).height(48.dp)) {
-            IconButton(onClick = onBack, enabled = !saving && !importing,
+            IconButton(onClick = leaveEditor, enabled = ready && !saving && !importing && !export.busy,
                 modifier = Modifier.align(Alignment.CenterStart).padding(start = 8.dp)) {
                 Asset(R.drawable.editor_button_svg, 24.dp, description = "Back")
             }
@@ -112,6 +134,9 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
                     colors = ButtonDefaults.buttonColors(disabledContainerColor = Color(0xFFF3F4F6)),
                     contentPadding = PaddingValues(0.dp)) { Text("Save", fontFamily = Baloo) }
             }
+        }
+        if (!saveOpen) error?.let {
+            Text(it, Modifier.padding(horizontal = 20.dp), color = MaterialTheme.colorScheme.error, fontFamily = Baloo)
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 20.dp),
@@ -161,7 +186,6 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
                 preview?.let { Image(it.asImageBitmap(), "Sticker preview", Modifier.fillMaxSize()) }
             }
             if (importing) LinearProgressIndicator(Modifier.fillMaxWidth())
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
         Surface(shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp), shadowElevation = 6.dp) {
             Column(Modifier.fillMaxWidth().then(if (tool == "Text") Modifier.height(220.dp) else Modifier.heightIn(max = 230.dp))
@@ -332,11 +356,11 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
                 val png = withContext(Dispatchers.Default) { renderSticker(context, doc).let { bitmap -> try { bitmap.pngBytes() } finally { bitmap.recycle() } } }
                 val saved = StudioRepository.save(operationId, name, png)
                 collectionId?.let { StudioRepository.add(it, saved.id) }
-                withContext(Dispatchers.IO) { EditorDraft.write(context, StickerDocument()) }
+                persistDraft(StickerDocument())
                 saveOpen = false; onSaved(saved)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { error = "Không thể lưu sticker. Kiểm tra kết nối rồi thử lại. Bản nháp vẫn được giữ trên máy." }
             finally { saving = false }
         }
-    }) { Text(if (saving) "Saving…" else "Save") } }, dismissButton = { TextButton(enabled = !saving, onClick = { saveOpen = false }) { Text("Cancel") } })
+    }) { Text(if (saving) "Saving…" else "Save") } }, dismissButton = { TextButton(enabled = !saving && !export.busy, onClick = { saveOpen = false }) { Text("Cancel") } })
 }
