@@ -22,6 +22,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
@@ -57,8 +59,10 @@ internal fun PremiumLayout(
     Box(Modifier.fillMaxSize().premiumGradient(false).navigationBarsPadding()) {
         Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Box(Modifier.fillMaxWidth().height(844.dp).selectableGroup()) {
-                Image(painterResource(R.drawable.premium_figma_hero), null,
-                    Modifier.offset(49.dp, 51.dp).size(292.dp, 219.dp), contentScale = ContentScale.Fit)
+                if (monthly) {
+                    Image(premiumHero(), null,
+                        Modifier.offset(49.dp, 51.dp).size(292.dp, 219.dp), contentScale = ContentScale.Fit, filterQuality = FilterQuality.High)
+                }
                 IconButton(onClick = onClose, Modifier.offset(6.dp, 44.dp).size(48.dp)) {
                     Asset(R.drawable.premium_figma_close, 20.dp, description = "Close Premium")
                 }
@@ -94,7 +98,7 @@ internal fun PremiumLayout(
                     Label(R.drawable.premium_figma_privacy, "Privacy Policy", .5f, 14.0888f, 60f, 14f)
                 }
                 listOf(176.5f, 244.5f).forEach { x ->
-                    Box(Modifier.offset(x.dp, 781.5888.dp).size(.5.dp, 11.dp).background(Color(0xFF4B5563)))
+                    Box(Modifier.offset(x.dp, 781.5888.dp).size(.5.dp, 11.dp).background(Color.White, RoundedCornerShape(.25.dp)))
                 }
             }
         }
@@ -104,7 +108,7 @@ internal fun PremiumLayout(
 @Composable
 private fun PremiumPlan(monthly: Boolean, active: Boolean, modifier: Modifier, onSelect: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    val ink = if (active) PremiumInk else Color(0xFF4B5563)
+    val ink = if (active || !monthly) PremiumInk else Color(0xFF4B5563)
     Box(modifier.then(if (active) Modifier.premiumShadow(true) else Modifier)
         .clip(shape).then(if (active) Modifier.premiumGradient(true) else Modifier.background(Color.White))
         .then(if (active) Modifier.border(2.dp, PremiumGreen, shape) else Modifier)
@@ -142,12 +146,12 @@ private fun NativeLabel(text: String, x: Float, y: Float, width: Float, height: 
 }
 
 private fun Modifier.premiumShadow(glow: Boolean) = drawWithCache {
-    val padding = 20.dp.toPx()
+    val padding = (if (glow) 40 else 20).dp.toPx()
     val bitmap = android.graphics.Bitmap.createBitmap((size.width + padding * 2).toInt(),
         (size.height + padding * 2).toInt(), android.graphics.Bitmap.Config.ARGB_8888)
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         color = if (glow) android.graphics.Color.argb(102, 25, 216, 163) else android.graphics.Color.argb(38, 0, 0, 0)
-        maskFilter = android.graphics.BlurMaskFilter((if (glow) 6 else 1).dp.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL)
+        maskFilter = android.graphics.BlurMaskFilter((if (glow) 12 else 1).dp.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL)
     }
     val dy = if (glow) 0f else 4.dp.toPx()
     val radius = (if (glow) 12 else 16).dp.toPx()
@@ -167,4 +171,17 @@ private fun Modifier.premiumGradient(plan: Boolean) = drawWithCache {
         else Brush.linearGradient(0f to Color(0xFFEAF7E2), .53954f to Color(0xFFE7F6E6),
             .98442f to Color(0xFFD2F2ED), start = center - half, end = center + half)
     onDrawBehind { drawRect(brush) }
+}
+
+/** Decode close to the displayed size to avoid aliasing the large original illustration. */
+@Composable
+private fun premiumHero(): ImageBitmap {
+    val resources = LocalContext.current.resources
+    val targetWidth = with(LocalDensity.current) { 292.dp.roundToPx() }
+    return remember(resources, targetWidth) {
+        var sample = 1
+        while (1448 / (sample * 2) >= targetWidth) sample *= 2
+        android.graphics.BitmapFactory.decodeResource(resources, R.drawable.premium_figma_hero,
+            android.graphics.BitmapFactory.Options().apply { inScaled = false; inSampleSize = sample }).asImageBitmap()
+    }
 }

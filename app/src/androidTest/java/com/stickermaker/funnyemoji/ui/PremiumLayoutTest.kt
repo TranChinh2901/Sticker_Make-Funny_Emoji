@@ -48,6 +48,7 @@ class PremiumLayoutTest {
             }
             instrumentation.waitForIdleSync(); SystemClock.sleep(1500)
             fun screenshot(name: String) {
+                instrumentation.waitForIdleSync(); SystemClock.sleep(1500)
                 val full = instrumentation.uiAutomation.takeScreenshot()
                 val crop = Bitmap.createBitmap(full, 0, 0, 390, 844)
                 File(instrumentation.targetContext.cacheDir, name).outputStream().use { crop.compress(Bitmap.CompressFormat.PNG, 100, it) }
@@ -58,7 +59,7 @@ class PremiumLayoutTest {
                 listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->
                     MotionEvent.obtain(now, SystemClock.uptimeMillis(), action, x, y, 0).also {
                         it.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
-                        assertTrue("Touch injection", instrumentation.uiAutomation.injectInputEvent(it, true)); it.recycle()
+                        scenario.onActivity { activity -> activity.dispatchTouchEvent(it) }; it.recycle()
                         SystemClock.sleep(80)
                     }
                 }
