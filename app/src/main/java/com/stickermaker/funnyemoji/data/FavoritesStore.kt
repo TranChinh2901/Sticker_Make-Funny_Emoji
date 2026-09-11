@@ -55,13 +55,19 @@ class FavoritesStore(context: Context) {
             val remote = client.from("sticker_favorites").select { filter { eq("user_id", owner) } }
                 .decodeList<FavoriteRow>().map { it.stickerId }.toSet().intersect(knownIds)
             state.value = state.value.merge(remote); persist()
+            // One unsupported catalogue ID must not block other pending favorites.
             // Read a fresh snapshot each pass: a toggle during an in-flight request wins.
-            while (state.value.pending.isNotEmpty()) {
-                val (id, selected) = state.value.pending.entries.first()
-                if (selected) client.from("sticker_favorites").upsert(FavoriteRow(id))
-                else client.from("sticker_favorites").delete { filter { eq("user_id", owner); eq("sticker_id", id) } }
-                state.value = state.value.acknowledge(id, selected); persist()
+            val failed = mutableSetOf<String>()
+            while (true) {
+                val (id, selected) = state.value.pending.entries.firstOrNull { it.key !in failed } ?: break
+                try {
+                    if (selected) client.from("sticker_favorites").upsert(FavoriteRow(id))
+                    else client.from("sticker_favorites").delete { filter { eq("user_id", owner); eq("sticker_id", id) } }
+                    state.value = state.value.acknowledge(id, selected); persist()
+                } catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { failed += id }
             }
+            if (failed.isNotEmpty()) _error.value = "Saved on this device. Some favorites couldn't sync; retry when connected."
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { _error.value = "Saved on this device. Cloud sync unavailable; retry when connected." }
         finally { _syncing.value = false }

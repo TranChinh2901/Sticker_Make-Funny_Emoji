@@ -13,6 +13,10 @@ internal val LocalFavorites = staticCompositionLocalOf<FavoritesStore> { error("
 
 @Composable
 internal fun CatalogCard(id: String, modifier: Modifier, onUnlock: () -> Unit) {
+    if (id.startsWith("hug-")) {
+        HugCatalogCard(id.substringAfter("-").toInt(), modifier, onUnlock)
+        return
+    }
     val store = LocalFavorites.current
     val state by store.snapshot.collectAsState()
     val scope = rememberCoroutineScope()

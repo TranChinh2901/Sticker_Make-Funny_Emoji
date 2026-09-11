@@ -31,21 +31,44 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
     val scope = rememberCoroutineScope()
     var language by remember { mutableStateOf(preferences.getString("language", "en") ?: "en") }
     var dialog by rememberSaveable { mutableStateOf<String?>(null) }
-    var draftLanguage by remember { mutableStateOf(language) }
+    var draftLanguage by rememberSaveable { mutableStateOf(language) }
     var feedback by rememberSaveable { mutableStateOf("") }
     var feedbackId by rememberSaveable { mutableStateOf(UUID.randomUUID().toString()) }
     var rating by rememberSaveable { mutableIntStateOf(5) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var languageEdited by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) {
         try {
             StudioRepository.settings()?.let { remote ->
+                if (languageEdited) return@let
                 language = remote.language
                 withContext(Dispatchers.IO) { preferences.edit().putString("language", language).commit() }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) {}
+    }
+    if (dialog == "Language Setting") {
+        androidx.activity.compose.BackHandler { if (!busy) dialog = null }
+        LanguageScreen(draftLanguage, onSelect = { draftLanguage = it; error = null },
+            onBack = { if (!busy) dialog = null }, busy = busy, error = error,
+            onConfirm = {
+                if (!busy) {
+                    val selected = draftLanguage
+                    busy = true; error = null
+                    scope.launch {
+                        try {
+                            StudioRepository.language(selected)
+                            check(withContext(Dispatchers.IO) { preferences.edit().putString("language", selected).commit() })
+                            language = selected; dialog = null
+                        } catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) { error = "Couldn't save language. Check your connection, then tap the checkmark to retry." }
+                        finally { busy = false }
+                    }
+                }
+            })
+        return
     }
     Scaffold(containerColor = Color(0xFFF8FAFC), modifier = Modifier.navigationBarsPadding(),
         topBar = { Text("Settings", Modifier.fillMaxWidth().padding(start = 24.dp, top = 48.dp, bottom = 16.dp), fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 24.sp) },
@@ -64,7 +87,7 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
             Text("General", Modifier.padding(horizontal = 8.dp), fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             Surface(shape = RoundedCornerShape(24.dp), shadowElevation = 2.dp) {
                 Column(Modifier.padding(horizontal = 12.dp)) {
-                    SettingsRow("Language Setting", R.drawable.settings_group2, 17.917f, 17.917f, languages[language] ?: "English") { draftLanguage = language; error = null; dialog = "Language Setting" }
+                    SettingsRow("Language Setting", R.drawable.settings_group2, 17.917f, 17.917f, languages[language] ?: "English") { languageEdited = true; draftLanguage = language; error = null; dialog = "Language Setting" }
                     SettingsRow("Feedback", R.drawable.settings_group3, 18.333f, 16.25f) { error = null; dialog = "Feedback" }
                     SettingsRow("Rating", R.drawable.settings_icon_park_outline_star, 20f, 20f) { error = null; dialog = "Rating" }
                     SettingsRow("Share App", R.drawable.settings_group4, 15f, 16.667f) {
@@ -86,14 +109,6 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
         AlertDialog(onDismissRequest = { if (!busy) dialog = null }, title = { Text(title) }, text = {
             Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (title) {
-                    "Language Setting" -> {
-                        Text("Choose the language for the welcome screens. The editor currently uses English.")
-                        languages.forEach { (code, label) ->
-                            Row(Modifier.fillMaxWidth().clickable(enabled = !busy) { draftLanguage = code }, verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(draftLanguage == code, { draftLanguage = code }, enabled = !busy); Text(label)
-                            }
-                        }
-                    }
                     "Privacy Policy" -> Text("Your photos stay on your device while editing. When you save, the finished PNG and its name are uploaded to your private studio. Collections and language preferences are stored with your guest account. Feedback is sent only when you press Submit. Sharing opens Android's share sheet so you can choose a destination.\n\nThis demo uses a guest account: clearing app data or uninstalling can remove access to that account. A published privacy policy and account recovery are not yet available.")
                     else -> {
                         if (title == "Rating") {
@@ -120,17 +135,11 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
                     busy = true; error = null
                     scope.launch {
                         try {
-                            if (title == "Language Setting") {
-                                StudioRepository.language(draftLanguage)
-                                check(withContext(Dispatchers.IO) { preferences.edit().putString("language", draftLanguage).commit() })
-                                language = draftLanguage
-                            } else {
-                                val prefix = if (title == "Rating") "Rating $rating/5: " else "$title: "
-                                StudioRepository.feedback(feedbackId, (prefix + feedback.trim()).take(2000))
-                                feedback = ""; feedbackId = UUID.randomUUID().toString()
-                            }
+                            val prefix = if (title == "Rating") "Rating $rating/5: " else "$title: "
+                            StudioRepository.feedback(feedbackId, (prefix + feedback.trim()).take(2000))
+                            feedback = ""; feedbackId = UUID.randomUUID().toString()
                             dialog = null
-                            snackbar.showSnackbar(if (title == "Language Setting") "Language saved" else "Submitted. Thank you!")
+                            snackbar.showSnackbar("Submitted. Thank you!")
                         } catch (cancelled: CancellationException) { throw cancelled }
                         catch (_: Exception) { error = "Không thể lưu. Kiểm tra kết nối rồi thử lại." }
                         finally { busy = false }

@@ -17,6 +17,25 @@ import java.util.UUID
 /** Opt-in integration test. Creates and cleans only its own uniquely identified records. */
 @RunWith(AndroidJUnit4::class)
 class StudioCloudTest {
+    @Test fun bundledHugImageSurvivesSaveAndRetry() = runBlocking {
+        assumeTrue(InstrumentationRegistry.getArguments().getString("liveSupabase") == "true")
+        withTimeout(60_000) {
+            val id = UUID.randomUUID().toString()
+            val context = InstrumentationRegistry.getInstrumentation().targetContext
+            val bytes = context.resources.openRawResource(com.stickermaker.funnyemoji.R.drawable.preview_hug_2).use { it.readBytes() }
+            var saved: SavedSticker? = null
+            try {
+                saved = StudioRepository.save(id, "Hug verification ${id.take(8)}", bytes)
+                assertEquals(saved, StudioRepository.save(id, saved.name, bytes))
+                assertEquals(1, StudioRepository.list().count { it.id == id })
+                assertArrayEquals(bytes, StudioRepository.image(saved.imagePath))
+            } finally {
+                StudioRepository.delete(id)
+                saved?.let { SupabaseProvider.client.storage.from("sticker-images").delete(listOf(it.imagePath)) }
+            }
+        }
+    }
+
     @Test fun collectionAndStickerRoundTrip() = runBlocking {
         assumeTrue(InstrumentationRegistry.getArguments().getString("liveSupabase") == "true")
         withTimeout(90_000) {

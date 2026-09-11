@@ -9,7 +9,7 @@ object StickerCatalog {
             CatalogSticker("${category.lowercase()}-$index", "NickNam", category,
                 listOf(category, "NickNam"))
         }
-    }
+    } + (0..2).map { CatalogSticker("hug-$it", "Hug ${it + 1}", "Hug", listOf("hug", "cat")) }
 
     fun search(query: String): List<CatalogSticker> {
         val words = query.trim().lowercase().split(Regex("\\s+")).filter { it.isNotBlank() }

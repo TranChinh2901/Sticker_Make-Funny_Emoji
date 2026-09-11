@@ -140,43 +140,74 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
     var delete by rememberSaveable { mutableStateOf(false) }
     val export = rememberPngExport()
     androidx.activity.compose.BackHandler(enabled = busy || export.busy) {}
-    Column(Modifier.fillMaxSize().background(StickerBackground).navigationBarsPadding()) {
-        StudioHeader("Preview sticker", { if (!busy && !export.busy) onBack() }) {
-            TextButton(enabled = !busy && !export.busy, onClick = { error = null; delete = true }) { Text("Delete") }
-        }
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            PrivateImage(sticker.imagePath, Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(24.dp)).background(androidx.compose.ui.graphics.Color.White), label = sticker.name)
-            Text(sticker.name, fontFamily = Baloo, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-            Button(enabled = !busy && !export.busy, modifier = Modifier.fillMaxWidth().height(56.dp), onClick = {
-                busy = true; error = null
-                scope.launch {
-                    try {
-                        val bytes = StudioRepository.image(sticker.imagePath)
-                        val file = withContext(Dispatchers.IO) {
-                            File(context.cacheDir, "shared").mkdirs()
-                            File(context.cacheDir, "shared/${sticker.id}.png").apply { writeBytes(bytes) }
-                        }
-                        val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
-                        val intent = Intent(Intent.ACTION_SEND).setType("image/png").putExtra(Intent.EXTRA_STREAM, uri)
-                            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        context.startActivity(Intent.createChooser(intent, "Share sticker"))
-                    } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { error = "Không thể chia sẻ ảnh. Kiểm tra kết nối và thử lại." }
-                    finally { busy = false }
+    var more by remember { mutableStateOf(false) }
+    var shareInfo by remember { mutableStateOf(false) }
+    var viewMore by remember { mutableStateOf(false) }
+    var unlock by remember { mutableStateOf(false) }
+    val enabled = !busy && !export.busy
+    fun share() {
+        busy = true; error = null
+        scope.launch {
+            try {
+                val bytes = StudioRepository.image(sticker.imagePath)
+                val file = withContext(Dispatchers.IO) {
+                    File(context.cacheDir, "shared").mkdirs()
+                    File(context.cacheDir, "shared/${sticker.id}.png").apply { writeBytes(bytes) }
                 }
-            }) { Text("Share PNG") }
-            Button(enabled = !busy && !export.busy, modifier = Modifier.fillMaxWidth().height(56.dp), onClick = {
-                chooseCollection = true
-            }) { Text("Add to Collection") }
-            OutlinedButton(enabled = !busy && !export.busy, modifier = Modifier.fillMaxWidth().height(52.dp), onClick = {
-                export.save(sticker.name) { StudioRepository.image(sticker.imagePath) }
-            }) { Text("Save PNG to device") }
-            if (busy || export.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                val intent = Intent(Intent.ACTION_SEND).setType("image/png").putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                context.startActivity(Intent.createChooser(intent, "Share sticker"))
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { error = "Không thể chia sẻ ảnh. Kiểm tra kết nối và thử lại." }
+            finally { busy = false }
+        }
+    }
+    StickerPreviewLayout(
+        onBack = onBack, onShare = { shareInfo = true }, onCollection = { chooseCollection = true },
+        onViewMore = { viewMore = true }, enabled = enabled,
+        preview = { PrivateImage(sticker.imagePath, it, label = sticker.name) },
+        related = { index -> HugCatalogCard(index, onUnlock = { unlock = true }, onSaved = { onChanged() }) },
+        options = {
+            Box {
+                IconButton(enabled = enabled, onClick = { more = true }, modifier = Modifier.requiredSize(48.dp)) {
+                    Asset(R.drawable.preview_more, 24.dp, description = "Sticker options")
+                }
+                DropdownMenu(more, { more = false }) {
+                    DropdownMenuItem(text = { Text("Share PNG") }, enabled = enabled, onClick = { more = false; share() })
+                    DropdownMenuItem(text = { Text("Save PNG to device") }, enabled = enabled, onClick = {
+                        more = false; export.save(sticker.name) { StudioRepository.image(sticker.imagePath) }
+                    })
+                    DropdownMenuItem(text = { Text("Delete sticker") }, enabled = enabled, onClick = {
+                        more = false; error = null; delete = true
+                    })
+                }
+            }
+        },
+        status = {
+            if (!enabled) LinearProgressIndicator(Modifier.fillMaxWidth())
             export.message?.let { Text(it) }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             message?.let { Text(it, color = StickerGreen) }
-        }
-    }
+            FavoriteSyncStatus()
+        },
+    )
+    if (shareInfo) AlertDialog(onDismissRequest = { shareInfo = false }, title = { Text("Share your sticker") },
+        text = { Text("This sticker is already saved in My Studio. Share its PNG to WhatsApp or another app. This does not install a WhatsApp sticker pack.") },
+        confirmButton = { TextButton(onClick = { shareInfo = false; share() }) { Text("Share PNG") } },
+        dismissButton = { TextButton(onClick = { shareInfo = false }) { Text("Cancel") } })
+    if (viewMore) AlertDialog(onDismissRequest = { viewMore = false }, title = { Text("Hug") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    repeat(3) { index -> HugCatalogCard(index, onUnlock = { unlock = true }, onSaved = { onChanged() }) }
+                }
+                FavoriteSyncStatus()
+            }
+        }, confirmButton = { TextButton(onClick = { viewMore = false }) { Text("Close") } })
+    if (unlock) AlertDialog(onDismissRequest = { unlock = false }, title = { Text("Sticker locked") },
+        text = { Text("This sticker is not available yet. You can use the free Hug sticker now.") },
+        confirmButton = { TextButton(onClick = { unlock = false }) { Text("OK") } })
     if (delete) AlertDialog(onDismissRequest = { if (!busy) delete = false }, title = { Text("Delete sticker?") },
         text = { Column { Text("Remove ${sticker.name} from My Studio and all its collections? Files you exported remain on your device."); error?.let { Text(it, color = MaterialTheme.colorScheme.error) } } },
         confirmButton = { TextButton(enabled = !busy, onClick = {
