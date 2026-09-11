@@ -48,7 +48,7 @@ internal data class StudioOverview(
 
 @Composable
 internal fun MyStudioScreen(onCreate: () -> Unit, refresh: Int, onNavigate: (Int) -> Unit,
-    onPremium: () -> Unit, onCollection: (StickerCollection) -> Unit, onSticker: (SavedSticker) -> Unit, onUnlock: () -> Unit) {
+    onPremium: () -> Unit, onCollection: (StickerCollection) -> Unit, onSticker: (SavedSticker) -> Unit, onUnlock: (String) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val favorites by LocalFavorites.current.snapshot.collectAsState()

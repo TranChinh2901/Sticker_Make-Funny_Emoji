@@ -54,7 +54,7 @@ fun StickerApp() {
     var collectionOpen by rememberSaveable { mutableStateOf(false) }
     var premiumOpen by rememberSaveable { mutableStateOf(false) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
-    var unlockOpen by rememberSaveable { mutableStateOf(false) }
+    var unlockStickerId by rememberSaveable { mutableStateOf<String?>(null) }
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     var detail by rememberSaveable(stateSaver = Saver<StickerCollection?, String>(
         save = { it?.let { value -> Json.encodeToString(value) } ?: "" },
@@ -92,32 +92,35 @@ fun StickerApp() {
             screenState.SaveableStateProvider(key) {
                 when {
                     premiumOpen -> PremiumScreen(onClose = { premiumOpen = false })
-                    preview != null -> SavedStickerScreen(preview!!, onBack = { preview = null }, onNewCollection = { collectionOpen = true }, onDeleted = { preview = null; collectionRefresh++ }, onChanged = { collectionRefresh++ })
+                    preview != null -> SavedStickerScreen(preview!!, onBack = { preview = null }, onNewCollection = { collectionOpen = true }, onDeleted = { preview = null; collectionRefresh++ }, onUnlock = { index -> unlockStickerId = "hug-$index" }, onChanged = { collectionRefresh++ })
                     tab == 1 -> EditorScreen(collectionId = detail?.id, onBack = { tab = if (detail != null) 2 else 0 }, onSaved = {
                         preview = it; tab = 2; collectionRefresh++
                     })
                     detail != null -> CollectionDetailScreen(detail!!, onBack = { detail = null },
                         onCreate = { tab = 1 }, onChanged = { collectionRefresh++ }, refresh = collectionRefresh,
                         onPreview = { preview = it })
-                    searchOpen -> SearchScaffold(onBack = { searchOpen = false }, onUnlock = { unlockOpen = true }, onPremium = { premiumOpen = true })
+                    searchOpen -> SearchScaffold(onBack = { searchOpen = false }, onUnlock = { unlockStickerId = it }, onPremium = { premiumOpen = true })
                     category != null -> CategoryScreen(title = category!!, onBack = { category = null },
-                        onPremium = { premiumOpen = true }, onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true })
+                        onPremium = { premiumOpen = true }, onSearch = { searchOpen = true }, onUnlock = { unlockStickerId = it })
                     tab == 2 -> MyStudioScreen(onCreate = { collectionOpen = true }, refresh = collectionRefresh,
-                        onNavigate = navigate, onPremium = { premiumOpen = true }, onCollection = { detail = it }, onSticker = { preview = it }, onUnlock = { unlockOpen = true })
+                        onNavigate = navigate, onPremium = { premiumOpen = true }, onCollection = { detail = it }, onSticker = { preview = it }, onUnlock = { unlockStickerId = it })
                     tab == 3 -> SettingsScreen(onNavigate = navigate, onPremium = { premiumOpen = true })
-                    else -> MixedModeHome(onSearch = { searchOpen = true }, onUnlock = { unlockOpen = true },
+                    else -> MixedModeHome(onSearch = { searchOpen = true }, onUnlock = { unlockStickerId = it },
                         onViewMore = { category = if (it == "Trendding") "Trending" else it },
                         onPremium = { premiumOpen = true }, onNavigate = navigate)
                 }
             }
             if (collectionOpen) NewCollectionSheet(onDismiss = { collectionOpen = false }, onCreated = { collectionRefresh++ })
-            if (unlockOpen) UnlockStickerSheet(onDismiss = { unlockOpen = false }, onPremium = { unlockOpen = false; premiumOpen = true })
+            unlockStickerId?.let { id ->
+                CatalogUnlockSheet(id, onDismiss = { unlockStickerId = null },
+                    onPremium = { unlockStickerId = null; premiumOpen = true })
+            }
         }
     }
 }
 
 @Composable
-private fun SearchScaffold(onBack: () -> Unit, onUnlock: () -> Unit, onPremium: () -> Unit) {
+private fun SearchScaffold(onBack: () -> Unit, onUnlock: (String) -> Unit, onPremium: () -> Unit) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val later: (String) -> Unit = { feature ->
@@ -153,7 +156,7 @@ private fun SearchScaffold(onBack: () -> Unit, onUnlock: () -> Unit, onPremium: 
 }
 
 @Composable
-private fun HomeContent(modifier: Modifier = Modifier, onUnlock: () -> Unit) {
+private fun HomeContent(modifier: Modifier = Modifier, onUnlock: (String) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val results = StickerCatalog.search(query)
     LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {

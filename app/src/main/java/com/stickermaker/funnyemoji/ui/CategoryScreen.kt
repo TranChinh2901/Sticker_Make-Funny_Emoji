@@ -2,6 +2,8 @@ package com.stickermaker.funnyemoji.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.items
@@ -19,15 +21,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stickermaker.funnyemoji.R
+import com.stickermaker.funnyemoji.data.StickerCatalog
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun CategoryScreen(title: String, onBack: () -> Unit, onSearch: () -> Unit, onUnlock: () -> Unit, onPremium: () -> Unit) {
+internal fun CategoryScreen(title: String, onBack: () -> Unit, onSearch: () -> Unit, onUnlock: (String) -> Unit, onPremium: () -> Unit) {
     val tabs = listOf(title to 88, "Sanrio" to 66, "Snoopy" to 72, "Animal" to 68, "Anime" to 66)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val grid = rememberLazyGridState()
@@ -69,15 +75,51 @@ internal fun CategoryScreen(title: String, onBack: () -> Unit, onSearch: () -> U
                     }
                 }
             }
-            LazyVerticalGrid(columns = GridCells.Fixed(3), state = grid, modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                val results = com.stickermaker.funnyemoji.data.StickerCatalog.search(tabs[selectedTab].first)
-                if (results.isEmpty()) item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(3) }) {
-                    Text("No stickers in this category yet", Modifier.padding(vertical = 32.dp), fontFamily = Baloo)
+            val results = StickerCatalog.search(tabs[selectedTab].first)
+            if (results.isEmpty()) {
+                Column(
+                    // Figma: illustration at (111, 240), below the 152 dp header/tab area.
+                    modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+                        .padding(start = 24.dp, end = 24.dp, top = 88.dp, bottom = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Asset(R.drawable.frame_2087328708, 168.dp)
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "No Shimeji Yet",
+                        modifier = Modifier.fillMaxWidth(),
+                        fontFamily = Baloo,
+                        fontSize = 24.sp,
+                        lineHeight = 33.6.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF101828),
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    )
+                    Text(
+                        text = "The category doesn’t have any pet right now",
+                        modifier = Modifier.fillMaxWidth(),
+                        fontFamily = Baloo,
+                        fontSize = 16.sp,
+                        lineHeight = 22.4.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF565656),
+                        textAlign = TextAlign.Center,
+                        style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    )
                 }
-                items(results, key = { it.id }) { sticker ->
-                    CatalogCard(sticker.id, Modifier.fillMaxWidth(), onUnlock)
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    state = grid,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(results, key = { it.id }) { sticker ->
+                        CatalogCard(sticker.id, Modifier.fillMaxWidth(), onUnlock)
+                    }
                 }
             }
         }

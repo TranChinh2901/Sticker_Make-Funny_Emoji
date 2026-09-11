@@ -34,7 +34,7 @@ import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: () -> Unit, onViewMore: (String) -> Unit, onPremium: () -> Unit, onNavigate: (Int) -> Unit) {
+internal fun MixedModeHome(onSearch: () -> Unit, onUnlock: (String) -> Unit, onViewMore: (String) -> Unit, onPremium: () -> Unit, onNavigate: (Int) -> Unit) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val scroll = rememberLazyListState()

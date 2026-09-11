@@ -19,7 +19,11 @@ import com.stickermaker.funnyemoji.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun UnlockStickerSheet(onDismiss: () -> Unit, onPremium: () -> Unit) {
+internal fun UnlockStickerSheet(
+    onDismiss: () -> Unit, onPremium: () -> Unit,
+    @androidx.annotation.DrawableRes previewAsset: Int = R.drawable.home_reference_sticker,
+    previewLabel: String = "Sticker preview",
+) {
     var unavailable by rememberSaveable { mutableStateOf<String?>(null) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -42,7 +46,7 @@ internal fun UnlockStickerSheet(onDismiss: () -> Unit, onPremium: () -> Unit) {
                     fontFamily = Baloo, fontSize = 12.sp, lineHeight = 17.sp,
                     textAlign = TextAlign.Center, color = Color(0xFF4B5563))
                 Spacer(Modifier.height(16.dp))
-                Asset(R.drawable.home_reference_sticker, 160.dp, description = "Sticker preview")
+                Asset(previewAsset, 160.dp, description = previewLabel)
                 Spacer(Modifier.height(24.dp))
                 Button(onClick = {
                     unavailable = "Quảng cáo thưởng chưa được cấu hình. Sticker chưa được mở khóa."
@@ -65,5 +69,20 @@ internal fun UnlockStickerSheet(onDismiss: () -> Unit, onPremium: () -> Unit) {
             text = { Text(message) }, confirmButton = {
                 TextButton(onClick = { unavailable = null }) { Text("Đóng") }
             })
+    }
+}
+
+/** All catalogue entry points resolve the same stable sticker ID and artwork. */
+@Composable
+internal fun CatalogUnlockSheet(stickerId: String, onDismiss: () -> Unit, onPremium: () -> Unit) {
+    val sticker = com.stickermaker.funnyemoji.data.StickerCatalog.entries.firstOrNull { it.id == stickerId }
+    if (sticker == null) {
+        LaunchedEffect(stickerId) { onDismiss() }
+        return
+    }
+    val asset = if (sticker.id.startsWith("hug-")) hugAssets[sticker.id.substringAfter("-").toInt()]
+        else R.drawable.home_reference_sticker
+    key(stickerId) {
+        UnlockStickerSheet(onDismiss, onPremium, previewAsset = asset, previewLabel = sticker.name)
     }
 }

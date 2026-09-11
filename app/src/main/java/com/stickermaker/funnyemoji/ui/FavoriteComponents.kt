@@ -12,9 +12,9 @@ import kotlinx.coroutines.launch
 internal val LocalFavorites = staticCompositionLocalOf<FavoritesStore> { error("FavoritesStore missing") }
 
 @Composable
-internal fun CatalogCard(id: String, modifier: Modifier, onUnlock: () -> Unit) {
+internal fun CatalogCard(id: String, modifier: Modifier, onUnlock: (String) -> Unit) {
     if (id.startsWith("hug-")) {
-        HugCatalogCard(id.substringAfter("-").toInt(), modifier, onUnlock)
+        HugCatalogCard(id.substringAfter("-").toInt(), modifier, { onUnlock(id) })
         return
     }
     val store = LocalFavorites.current
@@ -23,7 +23,7 @@ internal fun CatalogCard(id: String, modifier: Modifier, onUnlock: () -> Unit) {
     StickerCard(id, modifier, id in state.ids, { selected ->
         store.choose(id, selected)
         scope.launch { store.sync() }
-    }, onUnlock)
+    }, { onUnlock(id) })
 }
 
 @Composable

@@ -130,7 +130,7 @@ internal fun CollectionDetailScreen(collection: StickerCollection, onBack: () ->
 }
 
 @Composable
-internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNewCollection: () -> Unit, onDeleted: () -> Unit, onChanged: () -> Unit = {}) {
+internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNewCollection: () -> Unit, onDeleted: () -> Unit, onUnlock: (Int) -> Unit, onChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var chooseCollection by remember { mutableStateOf(false) }
@@ -143,7 +143,6 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
     var more by remember { mutableStateOf(false) }
     var shareInfo by remember { mutableStateOf(false) }
     var viewMore by remember { mutableStateOf(false) }
-    var unlock by remember { mutableStateOf(false) }
     val enabled = !busy && !export.busy
     fun share() {
         busy = true; error = null
@@ -167,7 +166,7 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
         onBack = onBack, onShare = { shareInfo = true }, onCollection = { chooseCollection = true },
         onViewMore = { viewMore = true }, enabled = enabled,
         preview = { PrivateImage(sticker.imagePath, it, label = sticker.name) },
-        related = { index -> HugCatalogCard(index, onUnlock = { unlock = true }, onSaved = { onChanged() }) },
+        related = { index -> HugCatalogCard(index, onUnlock = { onUnlock(index) }, onSaved = { onChanged() }) },
         options = {
             Box {
                 IconButton(enabled = enabled, onClick = { more = true }, modifier = Modifier.requiredSize(48.dp)) {
@@ -200,14 +199,11 @@ internal fun SavedStickerScreen(sticker: SavedSticker, onBack: () -> Unit, onNew
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    repeat(3) { index -> HugCatalogCard(index, onUnlock = { unlock = true }, onSaved = { onChanged() }) }
+                    repeat(3) { index -> HugCatalogCard(index, onUnlock = { viewMore = false; onUnlock(index) }, onSaved = { onChanged() }) }
                 }
                 FavoriteSyncStatus()
             }
         }, confirmButton = { TextButton(onClick = { viewMore = false }) { Text("Close") } })
-    if (unlock) AlertDialog(onDismissRequest = { unlock = false }, title = { Text("Sticker locked") },
-        text = { Text("This sticker is not available yet. You can use the free Hug sticker now.") },
-        confirmButton = { TextButton(onClick = { unlock = false }) { Text("OK") } })
     if (delete) AlertDialog(onDismissRequest = { if (!busy) delete = false }, title = { Text("Delete sticker?") },
         text = { Column { Text("Remove ${sticker.name} from My Studio and all its collections? Files you exported remain on your device."); error?.let { Text(it, color = MaterialTheme.colorScheme.error) } } },
         confirmButton = { TextButton(enabled = !busy, onClick = {
