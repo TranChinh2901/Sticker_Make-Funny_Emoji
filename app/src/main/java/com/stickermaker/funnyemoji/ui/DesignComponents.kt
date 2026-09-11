@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -63,12 +64,17 @@ internal fun BrandHeader(title: String? = null, onPremium: () -> Unit) {
 
 @Composable
 internal fun MainNavigation(selected: Int, onSelect: (Int) -> Unit) {
+    // Screens already reserve the system navigation inset. It replaces the
+    // Figma bottom breathing room instead of adding a second blank strip.
+    val density = LocalDensity.current
+    val systemBottom = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val bottomSpace = (20.dp - systemBottom).coerceAtLeast(0.dp)
     val names = listOf("Home", "Customize", "My Studio", "Settings")
     val icons = if (selected == 2) listOf(R.drawable.studio_nav_home, R.drawable.studio_nav_customize,
         R.drawable.studio_nav_folder, R.drawable.studio_nav_settings) else listOf(if (selected == 0) R.drawable.home_solar_home_angle_bold else R.drawable.settings_group,
         R.drawable.home_si_ai_edit_alt2_line, if (selected == 2) R.drawable.studio_folder_active else R.drawable.home_group, if (selected == 3) R.drawable.settings_lsicon_setting_filled else R.drawable.home_group1)
     Surface(shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp), shadowElevation = 10.dp) {
-        Row(Modifier.fillMaxWidth().height(84.2.dp).padding(start = 20.dp, end = 20.dp, top = 21.dp, bottom = 20.dp),
+        Row(Modifier.fillMaxWidth().height(64.2.dp + bottomSpace).padding(start = 20.dp, end = 20.dp, top = 21.dp, bottom = bottomSpace),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             names.forEachIndexed { index, name ->
                 Column(Modifier.weight(1f).fillMaxHeight().clickable(role = Role.Tab) { onSelect(index) },
