@@ -40,9 +40,9 @@ internal fun UnlockStickerSheet(
                 Spacer(Modifier.height(12.dp))
                 Box(Modifier.size(60.dp, 6.dp).background(Color(0xFFADADAD), CircleShape))
                 Spacer(Modifier.height(16.dp))
-                Text("Unlock Sticker", fontFamily = Baloo, fontSize = 24.sp,
+                Text("🔒 Unlock Sticker", fontFamily = Baloo, fontSize = 24.sp,
                     lineHeight = 30.sp, fontWeight = FontWeight.SemiBold, color = StickerInk)
-                Text("Watch a short video ad to unlock this sticker For Free.",
+                Text("Watch a short video Ad to Unlock Pet",
                     fontFamily = Baloo, fontSize = 12.sp, lineHeight = 17.sp,
                     textAlign = TextAlign.Center, color = Color(0xFF4B5563))
                 Spacer(Modifier.height(16.dp))
