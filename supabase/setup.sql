@@ -95,7 +95,7 @@ with check (bucket_id = 'sticker-images' and (storage.foldername(name))[1] = aut
 -- Bundled catalogue identifiers are shared across Home, Search, Category and Studio.
 create table public.sticker_favorites (
  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
- sticker_id text not null check (sticker_id ~ '^(trending|frame|animal|hug)-[0-2]$'),
+ sticker_id text not null check (sticker_id ~ '^(trending|frame|animal|hug)-[0-2]$' or sticker_id ~ '^cat-[0-8]$'),
  created_at timestamptz not null default now(),
  primary key (user_id, sticker_id)
 );

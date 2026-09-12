@@ -81,7 +81,7 @@ internal fun CatalogUnlockSheet(stickerId: String, onDismiss: () -> Unit, onPrem
         return
     }
     val asset = if (sticker.id.startsWith("hug-")) hugAssets[sticker.id.substringAfter("-").toInt()]
-        else R.drawable.home_reference_sticker
+        else sticker.imageRes
     key(stickerId) {
         UnlockStickerSheet(onDismiss, onPremium, previewAsset = asset, previewLabel = sticker.name)
     }

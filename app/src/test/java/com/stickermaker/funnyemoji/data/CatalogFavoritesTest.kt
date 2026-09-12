@@ -4,6 +4,17 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class CatalogFavoritesTest {
+    @Test fun `cat fixtures match generic queries and specific names`() {
+        val cats = StickerCatalog.cats
+        assertEquals(9, cats.size)
+        assertTrue(StickerCatalog.search("  CAT  ").containsAll(cats))
+        assertTrue(StickerCatalog.search("mèo").containsAll(cats))
+        assertEquals(listOf(cats[1]), StickerCatalog.search("black cat"))
+        assertEquals(listOf(cats[6]), StickerCatalog.search("Scottish Fold"))
+        assertTrue(StickerCatalog.search("purple spaceship cat").isEmpty())
+        assertEquals(cats.size, cats.map { it.imageRes }.distinct().size)
+    }
+
     @Test fun `search matches category case and whitespace using stable IDs`() {
         val home = StickerCatalog.entries.filter { it.category == "Trending" }
         assertEquals(home, StickerCatalog.search("  TRENDING  "))

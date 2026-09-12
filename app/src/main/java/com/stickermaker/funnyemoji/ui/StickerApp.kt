@@ -236,14 +236,15 @@ internal fun StickerCard(
     key: String, modifier: Modifier, favorite: Boolean,
     onFavoriteChange: (Boolean) -> Unit, onUnlock: () -> Unit,
 ) {
+    val sticker = StickerCatalog.entries.firstOrNull { it.id == key } ?: return
     Box(modifier.height(140.dp).border(1.dp, StickerGreen, RoundedCornerShape(16.dp))
         .background(Color.White, RoundedCornerShape(16.dp))) {
         Box(Modifier.align(Alignment.TopCenter).padding(top = 14.dp).size(70.dp), contentAlignment = Alignment.Center) {
-            Asset(R.drawable.home_reference_sticker, 70.dp, description = "NickNam sticker")
+            Asset(sticker.imageRes, 70.dp, description = "${sticker.name} sticker")
         }
         Box(Modifier.align(Alignment.TopCenter).padding(top = 89.dp).fillMaxWidth().height(22.dp),
             contentAlignment = Alignment.Center) {
-            Text("NickNam", modifier = Modifier.requiredHeight(18.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true),
+            Text(sticker.name, modifier = Modifier.requiredHeight(18.dp).wrapContentHeight(Alignment.CenterVertically, unbounded = true),
                 fontFamily = Baloo, fontSize = 12.sp, lineHeight = 16.sp,
                 fontWeight = FontWeight.Medium, maxLines = 1,
                 style = TextStyle(
@@ -255,14 +256,7 @@ internal fun StickerCard(
                 ))
         }
         Box(Modifier.align(Alignment.TopCenter).padding(top = 111.dp)) {
-            Row(Modifier.width(80.dp).height(20.dp).clip(CircleShape).background(StickerGreen)
-                .clickable(role = Role.Button, onClick = onUnlock),
-                horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
-                verticalAlignment = Alignment.CenterVertically) {
-                Asset(R.drawable.home_tabler_lock_filled, 10.dp)
-                Text("Unlock", fontFamily = Baloo, fontSize = 10.sp, lineHeight = 10.sp,
-                    color = Color.White, fontWeight = FontWeight.SemiBold)
-            }
+            CatalogActionButton(locked = true, onClick = onUnlock)
         }
         IconToggleButton(favorite, onFavoriteChange,
             Modifier.align(Alignment.TopEnd).offset(x = 1.2.dp, y = (-.9).dp).size(40.dp)) {

@@ -108,12 +108,10 @@ internal fun HugCard(index: Int, favorite: Boolean, onFavorite: () -> Unit, onUs
         .border(1.dp, PreviewGreen, RoundedCornerShape(12.dp))) {
         Image(painterResource(hugAssets[index]), "Hug ${index + 1}",
             Modifier.align(Alignment.TopCenter).padding(top = 25.dp).size(80.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-        Row(Modifier.align(Alignment.BottomCenter).padding(9.dp).fillMaxWidth().height(28.dp)
-            .clip(CircleShape).background(PreviewGreen).clickable(enabled = enabled, role = Role.Button, onClick = onUse),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally)) {
-            if (index != 1) Asset(R.drawable.preview_lock, 8.75.dp, 10.dp)
-            PreviewText(if (index == 1) "Use" else "Unlock", 12, 16, weight = FontWeight.SemiBold, color = Color.White)
+        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 9.dp)) {
+            CatalogActionButton(locked = index != 1, onClick = onUse, enabled = enabled)
         }
+
         IconToggleButton(favorite, { onFavorite() }, enabled = enabled,
             modifier = Modifier.align(Alignment.TopEnd).offset(x = 7.dp, y = (-5).dp).size(48.dp)) {
             Asset(if (favorite) R.drawable.home_solar_heart_bold else R.drawable.preview_heart, 16.dp, 13.663.dp,
