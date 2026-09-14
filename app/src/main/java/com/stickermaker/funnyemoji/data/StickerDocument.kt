@@ -23,7 +23,6 @@ data class StickerDocument(val background: Long = 0, val pattern: Boolean = fals
     val hasContent get() = background != 0L || pattern || layers.isNotEmpty() || strokes.isNotEmpty()
 }
 
-/** Coordinates are normalized, so the preview and 512px PNG share the same renderer. */
 internal fun renderSticker(context: Context, document: StickerDocument): Bitmap {
     val bitmap = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
