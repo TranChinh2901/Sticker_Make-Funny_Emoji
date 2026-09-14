@@ -3,6 +3,8 @@ package com.stickermaker.funnyemoji.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -13,6 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.data.StudioRepository
@@ -68,8 +74,27 @@ internal fun StartupScreen(onReady: () -> Unit) {
             val scale = maxOf(maxWidth / 390.dp, maxHeight / 844.dp)
             val artLeft = (maxWidth - 390.dp * scale) / 2
             val artTop = (maxHeight - 844.dp * scale) / 2
-            Image(painterResource(R.drawable.splash_art), null,
-                Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            val splashArt = ImageBitmap.imageResource(R.drawable.splash_art)
+            Image(splashArt, null,
+                Modifier.fillMaxSize().drawWithContent {
+                    drawContent()
+                    // The exported artwork includes a mock status bar in its first 44 px.
+                    // Stretch a clean background row over it, using the same crop transform.
+                    val imageScale = maxOf(size.width / splashArt.width, size.height / splashArt.height)
+                    drawImage(
+                        image = splashArt,
+                        srcOffset = IntOffset(0, 44),
+                        srcSize = IntSize(splashArt.width, 1),
+                        dstOffset = IntOffset(
+                            ((size.width - splashArt.width * imageScale) / 2).roundToInt(),
+                            ((size.height - splashArt.height * imageScale) / 2).roundToInt(),
+                        ),
+                        dstSize = IntSize(
+                            (splashArt.width * imageScale).roundToInt(),
+                            (44 * imageScale).roundToInt(),
+                        ),
+                    )
+                }, contentScale = ContentScale.Crop)
             LinearProgressIndicator(
                 modifier = Modifier.offset(x = artLeft + 20.dp * scale, y = artTop + 787.dp * scale)
                     .size(width = 350.dp * scale, height = 10.dp * scale),
