@@ -40,16 +40,16 @@ import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun StickerApp() {
+fun StickerApp(resumeDraftRequest: Long = 0L) {
     var startupComplete by rememberSaveable { mutableStateOf(false) }
-    if (!startupComplete) {
+    if (!startupComplete && resumeDraftRequest == 0L) {
         StartupScreen(onReady = { startupComplete = true })
         return
     }
     val context = LocalContext.current
     val favorites = remember { FavoritesStore(context) }
-    LaunchedEffect(favorites) { favorites.sync() }
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    LaunchedEffect(favorites, resumeDraftRequest) { if (resumeDraftRequest == 0L) favorites.sync() }
+    var tab by rememberSaveable { mutableIntStateOf(if (resumeDraftRequest > 0L) 1 else 0) }
     var collectionRefresh by rememberSaveable { mutableIntStateOf(0) }
     var collectionOpen by rememberSaveable { mutableStateOf(false) }
     var premiumOpen by rememberSaveable { mutableStateOf(false) }
@@ -66,6 +66,13 @@ fun StickerApp() {
     )) { mutableStateOf(null) }
     val screenState = rememberSaveableStateHolder()
     val navigate: (Int) -> Unit = { tab = it; detail = null; preview = null; category = null; searchOpen = false }
+    LaunchedEffect(resumeDraftRequest) {
+        if (resumeDraftRequest > 0L) {
+            startupComplete = true
+            navigate(1)
+            premiumOpen = false; collectionOpen = false; unlockStickerId = null
+        }
+    }
     BackHandler(enabled = premiumOpen || searchOpen || category != null || tab != 0 || detail != null || preview != null) {
         when {
             premiumOpen -> premiumOpen = false

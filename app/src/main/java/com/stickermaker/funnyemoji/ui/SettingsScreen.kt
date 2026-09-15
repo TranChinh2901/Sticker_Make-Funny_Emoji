@@ -12,12 +12,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.stickermaker.funnyemoji.BuildConfig
 import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.data.StudioRepository
+import com.stickermaker.funnyemoji.notifications.DraftNotifications
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.*
 import java.util.UUID
@@ -88,6 +90,17 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
             Surface(shape = RoundedCornerShape(24.dp), shadowElevation = 2.dp) {
                 Column(Modifier.padding(horizontal = 12.dp)) {
                     SettingsRow("Language Setting", R.drawable.settings_group2, 17.917f, 17.917f, languages[language] ?: "English") { languageEdited = true; draftLanguage = language; error = null; dialog = "Language Setting" }
+                    NotificationSettingsRow()
+                    if (BuildConfig.DEBUG) {
+                        SettingsRow(stringResource(R.string.test_notification_action), R.drawable.ic_notification_bell, 20f, 20f) {
+                            val sent = DraftNotifications.showTest(context)
+                            scope.launch {
+                                snackbar.showSnackbar(context.getString(
+                                    if (sent) R.string.test_notification_sent else R.string.test_notification_blocked,
+                                ))
+                            }
+                        }
+                    }
                     SettingsRow("Feedback", R.drawable.settings_group3, 18.333f, 16.25f) { error = null; dialog = "Feedback" }
                     SettingsRow("Rating", R.drawable.settings_icon_park_outline_star, 20f, 20f) { error = null; dialog = "Rating" }
                     SettingsRow("Share App", R.drawable.settings_group4, 15f, 16.667f) {
@@ -151,7 +164,7 @@ internal fun SettingsScreen(onNavigate: (Int) -> Unit, onPremium: () -> Unit) {
 }
 
 @Composable
-private fun SettingsRow(label: String, icon: Int, leafWidth: Float, leafHeight: Float, value: String? = null, onClick: () -> Unit) {
+internal fun SettingsRow(label: String, icon: Int, leafWidth: Float, leafHeight: Float, value: String? = null, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) { Asset(icon, leafWidth.dp, leafHeight.dp) }
         Text(label, Modifier.weight(1f).padding(start = 12.dp), fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif, fontSize = 16.sp)

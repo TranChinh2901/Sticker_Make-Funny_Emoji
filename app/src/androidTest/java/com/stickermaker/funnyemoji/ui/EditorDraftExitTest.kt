@@ -11,11 +11,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.painterResource
 import androidx.test.core.app.ActivityScenario
+import androidx.lifecycle.Lifecycle
+import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.stickermaker.funnyemoji.MainActivity
 import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.data.StickerCollection
+import com.stickermaker.funnyemoji.data.DraftRepository
+import com.stickermaker.funnyemoji.data.local.AppDatabase
+import kotlinx.coroutines.runBlocking
 import com.stickermaker.funnyemoji.ui.theme.StickerMakerTheme
 import org.junit.Assert.*
 import org.junit.Test
@@ -30,6 +35,45 @@ import java.util.concurrent.atomic.AtomicInteger
 @RunWith(AndroidJUnit4::class)
 class EditorDraftExitTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
+    @Test fun stoppingEditorSavesLatestDraftToRoomWithoutDuplicateObservers() {
+        val database = Room.inMemoryDatabaseBuilder(instrumentation.targetContext, AppDatabase::class.java).build()
+        val repository = DraftRepository(database.draftDao())
+        val writes = AtomicInteger()
+        val acceptWrites = AtomicBoolean(true)
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { activity -> activity.setContent {
+                    StickerMakerTheme {
+                        EditorScreen(onBack = {}, onSaved = {}, saveDraft = { snapshot ->
+                            if (acceptWrites.get()) {
+                                runBlocking { repository.save(snapshot) }
+                                writes.incrementAndGet()
+                            }
+                        })
+                    }
+                } }
+                waitFor { writes.get() > 0 && button("Color ffff0000") != null }
+                click("Color ffff0000")
+                waitFor { runBlocking { repository.read()?.document?.background == 0xFFFF0000 } }
+                repeat(2) {
+                    // Pausing alone (e.g. a partially covering window) is not ON_STOP.
+                    scenario.moveToState(Lifecycle.State.STARTED)
+                    val before = writes.get()
+                    scenario.moveToState(Lifecycle.State.CREATED)
+                    waitFor { writes.get() == before + 1 }
+                    assertEquals(0xFFFF0000, runBlocking { repository.read()!!.document.background })
+                    scenario.moveToState(Lifecycle.State.RESUMED)
+                    instrumentation.waitForIdleSync()
+                    assertEquals("Exactly one write per stop", before + 1, writes.get())
+                }
+                acceptWrites.set(false)
+            }
+        } finally {
+            acceptWrites.set(false)
+            database.close()
+        }
+    }
+
     @Test fun backWaitsForDraftAndRetainsEditorOnFailure() {
         val fail = AtomicBoolean(false)
         val block = AtomicBoolean(false)

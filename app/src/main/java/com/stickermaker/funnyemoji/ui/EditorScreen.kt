@@ -2,6 +2,7 @@ package com.stickermaker.funnyemoji.ui
 
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,8 +28,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.stickermaker.funnyemoji.R
 import com.stickermaker.funnyemoji.data.*
+import com.stickermaker.funnyemoji.data.local.AppDatabase
+import com.stickermaker.funnyemoji.notifications.DraftReminderScheduler
 import com.stickermaker.funnyemoji.ui.theme.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -40,6 +46,12 @@ import java.util.UUID
 internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSaved: (SavedSticker) -> Unit,
     saveDraft: ((StickerDocument) -> Unit)? = null) {
     val context = LocalContext.current
+    val activity = LocalActivity.current
+    var photoPickerOpen by rememberSaveable { mutableStateOf(false) }
+    val drafts = remember(context) { DraftRepository(AppDatabase.getInstance(context).draftDao()) }
+    var draftCollectionId by remember { mutableStateOf(collectionId) }
+    var draftCompleted by remember { mutableStateOf(false) }
+    var loadAttempt by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val export = rememberPngExport()
     var doc by remember { mutableStateOf(StickerDocument()) }
@@ -60,7 +72,9 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
     suspend fun persistDraft(snapshot: StickerDocument) = withContext(Dispatchers.IO) {
         draftMutex.withLock {
             ensureActive()
-            if (saveDraft != null) saveDraft(snapshot) else EditorDraft.write(context, snapshot)
+            if (!draftCompleted) {
+                if (saveDraft != null) saveDraft(snapshot) else drafts.save(snapshot, draftCollectionId)
+            }
         }
     }
     var importing by remember { mutableStateOf(false) }
@@ -70,35 +84,98 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
     var error by remember { mutableStateOf<String?>(null) }
     var gestureStart by remember { mutableStateOf<StickerDocument?>(null) }
     val change: (StickerDocument) -> Unit = { next ->
-        if (next != doc && !saving) {
+        if (ready && next != doc && !saving) {
             undo = (undo + doc).takeLast(30); redo = emptyList(); doc = next
             operationId = UUID.randomUUID().toString(); error = null
         }
     }
-    LaunchedEffect(Unit) {
-        doc = withContext(Dispatchers.IO) { EditorDraft.read(context) }; ready = true
+    LaunchedEffect(loadAttempt) {
+        error = null
+        try {
+            val restored = drafts.readOrMigrate(File(context.filesDir, "sticker-draft.json"), collectionId)
+            doc = restored?.document ?: StickerDocument()
+            draftCollectionId = if (doc.hasContent) restored?.collectionId else collectionId
+            ready = true
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { error = "Couldn't open your draft. Please retry." }
     }
     LaunchedEffect(doc, ready) {
         if (ready) {
             try { persistDraft(doc) }
-            catch (_: java.io.IOException) { error = "Không thể lưu bản nháp trên thiết bị." }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { error = "Không thể lưu bản nháp trên thiết bị." }
             preview = withContext(Dispatchers.Default) { renderSticker(context, doc) }
         }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val resumeEditor by rememberUpdatedState(newValue = {
+        val ticket = DraftReminderScheduler.markActive()
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            withContext(NonCancellable) {
+                try { DraftReminderScheduler.cancel(context.applicationContext, ticket) }
+                catch (_: Exception) { error = "Couldn't cancel your draft reminder. Please reopen the editor." }
+            }
+        }
+    })
+    val saveOnStop by rememberUpdatedState(newValue = {
+        val shouldRemind = !photoPickerOpen && !export.busy && activity?.isChangingConfigurations != true
+        val ticket = if (shouldRemind) DraftReminderScheduler.markAway() else null
+        if (ready && !draftCompleted) {
+            val snapshot = doc
+            // Start before disposal can cancel the UI scope; finish this local write.
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                withContext(NonCancellable) {
+                    try {
+                        persistDraft(snapshot)
+                        if (ticket != null && !draftCompleted && saveDraft == null) {
+                            DraftReminderScheduler.schedule(context.applicationContext, ticket)
+                        }
+                    }
+                    catch (_: Exception) { error = "Không thể lưu bản nháp trên thiết bị." }
+                }
+            }
+        }
+    })
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) saveOnStop()
+            if (event == Lifecycle.Event.ON_START) resumeEditor()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val leaveEditor: () -> Unit = {
         if (ready && !saving && !importing && !export.busy) {
             saving = true; error = null
             val snapshot = doc
             scope.launch {
-                try { persistDraft(snapshot); onBack() }
+                try {
+                    persistDraft(snapshot)
+                    val ticket = DraftReminderScheduler.markAway()
+                    if (saveDraft == null) DraftReminderScheduler.schedule(context.applicationContext, ticket)
+                    onBack()
+                }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { error = "Couldn't save your draft. Please try Back again." }
                 finally { saving = false }
             }
         }
     }
-    BackHandler(onBack = leaveEditor)
+    BackHandler(onBack = { if (ready) leaveEditor() else onBack() })
+    if (!ready) {
+        Column(Modifier.fillMaxSize().background(StickerBackground).padding(24.dp),
+            verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            if (error == null) CircularProgressIndicator()
+            else {
+                Text(error.orEmpty())
+                TextButton(onClick = { loadAttempt++ }) { Text("Retry") }
+            }
+            TextButton(onClick = onBack) { Text("Back") }
+        }
+        return
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        photoPickerOpen = false
         if (uri != null) {
             importing = true; error = null
             scope.launch {
@@ -251,6 +328,7 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
                         }
                     }
                     "Import" -> Button(enabled = !importing && !saving, onClick = {
+                        photoPickerOpen = true
                         picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }) { Text("Choose a photo") }
                     "Text" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -335,7 +413,7 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
     if (saveOpen) AlertDialog(onDismissRequest = { if (!saving && !export.busy) saveOpen = false }, title = { Text("Save sticker") }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(name, { name = it.take(80) }, enabled = !saving, label = { Text("Sticker name") }, singleLine = true)
-            Text(if (collectionId == null) "Your sticker will be saved to My Studio." else "Your sticker will be saved to this collection and My Studio.")
+            Text(if (draftCollectionId == null) "Your sticker will be saved to My Studio." else "Your sticker will be saved to this collection and My Studio.")
             OutlinedButton(enabled = !saving && !export.busy && name.isNotBlank(), onClick = {
                 val snapshot = doc
                 export.save(name) {
@@ -355,8 +433,13 @@ internal fun EditorScreen(collectionId: String? = null, onBack: () -> Unit, onSa
             try {
                 val png = withContext(Dispatchers.Default) { renderSticker(context, doc).let { bitmap -> try { bitmap.pngBytes() } finally { bitmap.recycle() } } }
                 val saved = StudioRepository.save(operationId, name, png)
-                collectionId?.let { StudioRepository.add(it, saved.id) }
-                persistDraft(StickerDocument())
+                draftCollectionId?.let { StudioRepository.add(it, saved.id) }
+                draftMutex.withLock {
+                    val ticket = DraftReminderScheduler.markActive()
+                    DraftReminderScheduler.cancel(context.applicationContext, ticket)
+                    drafts.delete()
+                    draftCompleted = true
+                }
                 saveOpen = false; onSaved(saved)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { error = "Không thể lưu sticker. Kiểm tra kết nối rồi thử lại. Bản nháp vẫn được giữ trên máy." }

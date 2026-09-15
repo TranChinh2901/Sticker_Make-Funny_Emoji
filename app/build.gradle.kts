@@ -58,6 +58,10 @@ kotlin {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2025.06.01")
     implementation(composeBom)
@@ -73,6 +77,7 @@ dependencies {
     val roomVersion = "2.8.4"
     implementation("androidx.room:room-runtime:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
 
     val supabaseBom = platform("io.github.jan-tennert.supabase:bom:3.5.0")
     implementation(supabaseBom)

@@ -62,9 +62,10 @@ internal fun MyStudioScreen(onCreate: () -> Unit, refresh: Int, onNavigate: (Int
     var mutationError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(refresh, retry) {
         overview = overview.copy(loading = true, error = null)
-        val draftCount = withContext(Dispatchers.IO) { if (EditorDraft.read(context).hasContent) 1 else 0 }
-        overview = overview.copy(drafts = draftCount)
         try {
+            val drafts = DraftRepository(com.stickermaker.funnyemoji.data.local.AppDatabase.getInstance(context).draftDao())
+            val draft = drafts.readOrMigrate(java.io.File(context.filesDir, "sticker-draft.json"))
+            overview = overview.copy(drafts = if (draft?.document?.hasContent == true) 1 else 0)
             val collections = CollectionRepository.list()
             val stickers = StudioRepository.list()
             val counts = StudioRepository.collectionCounts()
