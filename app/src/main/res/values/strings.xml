@@ -5,11 +5,6 @@
     <string name="notification_permission_label">Notifications</string>
     <string name="notification_permission_allowed">Allowed</string>
     <string name="notification_permission_off">Off</string>
-    <string name="test_notification_action">Test notification</string>
-    <string name="test_notification_title">Notification test</string>
-    <string name="test_notification_body">Local notifications are working. Tap to open Sticker Maker.</string>
-    <string name="test_notification_sent">Test sent. Check your notification panel.</string>
-    <string name="test_notification_blocked">Enable Notifications above, then try again.</string>
     <string name="draft_reminder_title">Your sticker is waiting 🎨</string>
     <string name="draft_reminder_body">Come back and finish the sticker you started.</string>
 </resources>

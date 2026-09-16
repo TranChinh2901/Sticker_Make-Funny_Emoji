@@ -16,7 +16,6 @@ import com.stickermaker.funnyemoji.R
 
 object DraftNotifications {
     const val CHANNEL_ID = "draft_reminders"
-    private const val TEST_NOTIFICATION_ID = 1001
     const val REMINDER_NOTIFICATION_ID = 1002
     const val ACTION_RESUME_DRAFT = "com.stickermaker.funnyemoji.RESUME_DRAFT"
 
@@ -29,11 +28,6 @@ object DraftNotifications {
         context.getString(R.string.draft_reminder_body), ACTION_RESUME_DRAFT,
     )
 
-
-    fun showTest(context: Context): Boolean = show(
-        context, TEST_NOTIFICATION_ID, context.getString(R.string.test_notification_title),
-        context.getString(R.string.test_notification_body), null,
-    )
 
     private fun show(context: Context, id: Int, title: String, body: String, action: String?): Boolean {
         createChannel(context)

@@ -22,7 +22,6 @@ object DraftReminderScheduler {
     private val revision = AtomicLong()
     @Volatile private var editorActive = false
 
-
     fun markActive(): Long { editorActive = true; return revision.incrementAndGet() }
     fun markAway(): Long { editorActive = false; return revision.incrementAndGet() }
 
