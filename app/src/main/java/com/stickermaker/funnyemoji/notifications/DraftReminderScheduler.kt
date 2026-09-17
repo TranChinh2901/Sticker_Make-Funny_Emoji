@@ -16,8 +16,13 @@ import java.util.concurrent.atomic.AtomicLong
 
 object DraftReminderScheduler {
     const val WORK_NAME = "unfinished-sticker-reminder"
-    const val DEFAULT_DELAY_MS = 10 * 1000L 
-    // const val DEFAULT_DELAY_MS = 30 * 60 * 1000L 
+
+
+    // const val DEFAULT_DELAY_MS = 60 * 60 * 1000L  //Đây là thời gian chờ thông báo 1h như cậu đã nói 
+
+    //Còn đây là phần con chỉnh lại còn 5s để test thông báo ạ
+    const val DEFAULT_DELAY_MS = 5 * 1000L
+
     private val mutex = Mutex()
     private val revision = AtomicLong()
     @Volatile private var editorActive = false
